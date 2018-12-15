@@ -27,6 +27,7 @@ bot = telebot.TeleBot('468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c')
 idMe = 396978030
 old2_ru = int(data1.cell(1, 1).value)
 old2_eu = int(data2.cell(1, 1).value)
+firstopen = 1
 form_ru = 'Лот #(\d+) : (.*)\n' \
        'Продавец: (.*)\n' \
        'Текущая цена: (\d+) 👝\n' \
@@ -54,6 +55,7 @@ def oldest_ru():
             search = re.search(form_ru, str(text.text))
             if search:
                 if str(search.group(11)) != '#active':
+                    print('работаю https://t.me/chatwars3/' + str(old2_ru))
                     name = str(search.group(2))
                     ench = re.search('(⚡)\+(\d+) ', name)
                     enchanted = 'no'
@@ -74,6 +76,8 @@ def oldest_ru():
                         data1 = client1.open('storage-generator').worksheet('old2')
                         data1.update_cell(1, 1, old2_ru)
                         data1.insert_row(goo, 2)
+                else:
+                    print('https://t.me/chatwars3/' + str(old2_ru) + ' Активен, ничего не делаю')
 
         except Exception as e:
             bot.send_message(idMe, 'вылет oldest_ru')
@@ -83,7 +87,12 @@ def oldest_ru():
 def oldest_eu():
     while True:
         try:
-            sleep(3)
+            global firstopen
+            if firstopen != 1:
+                sleep(3)
+            else:
+                sleep(5)
+                firstopen = 0
             global data1
             global old2_eu
             goo = []
@@ -91,6 +100,7 @@ def oldest_eu():
             search = re.search(form_eu, str(text.text))
             if search:
                 if str(search.group(11)) != '#active':
+                    print('работаю https://t.me/ChatWarsAuction/' + str(old2_eu))
                     name = str(search.group(2))
                     ench = re.search('(⚡)\+(\d+) ', name)
                     enchanted = 'no'
@@ -111,6 +121,8 @@ def oldest_eu():
                         data2 = client2.open('eustgen').worksheet('old2')
                         data2.update_cell(1, 1, old2_eu)
                         data2.insert_row(goo, 2)
+                else:
+                    print('https://t.me/ChatWarsAuction/' + str(old2_eu) + ' Активен, ничего не делаю')
 
         except Exception as e:
             bot.send_message(idMe, 'вылет oldest_eu')
