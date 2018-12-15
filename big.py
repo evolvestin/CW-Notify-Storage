@@ -32,13 +32,13 @@ form_ru = 'Лот #(\d+) : (.*)\n' \
        'Продавец: (.*)\n' \
        'Текущая цена: (\d+) 👝\n' \
        'Покупатель: (.+)\n' \
-       'Срок: (\d\d) (.*) 106(.) (\d\d):(\d\d)\n' \
+       'Срок: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
        'Статус: (#active|Finished|Cancelled)'
 form_eu = 'Lot #(\d+) : (.*)\n' \
        'Seller: (.*)\n' \
        'Current price: (\d+) pouch\(es\)\n' \
        'Buyer: (.+)\n' \
-       'End At: (\d\d) (.*) 106(.) (\d\d):(\d\d)\n' \
+       'End At: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
        'Status: (#active|Finished|Cancelled)'
 # ====================================================================================
 bot.send_message(idMe, '👀')
@@ -62,7 +62,9 @@ def oldest_ru():
                     if ench:
                         name = re.sub('⚡\+\d+ ', '', name)
                         enchanted = ench.group(2)
-                    goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + search.group(3)
+                    seller = search.group(3).split(' ')
+                    castle_nick = seller[0] + '.' + seller[1]
+                    goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
                                + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
                                + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
                                + '/' + search.group(10) + '/' + search.group(11))
@@ -107,7 +109,9 @@ def oldest_eu():
                     if ench:
                         name = re.sub('⚡\+\d+ ', '', name)
                         enchanted = ench.group(2)
-                    goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + search.group(3)
+                    seller = search.group(3).split(' ')
+                    castle_nick = seller[0] + '.' + seller[1]
+                    goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
                                + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
                                + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
                                + '/' + search.group(10) + '/' + search.group(11))
