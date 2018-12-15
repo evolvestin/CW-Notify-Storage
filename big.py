@@ -63,7 +63,7 @@ def oldest_ru():
                         name = re.sub('⚡\+\d+ ', '', name)
                         enchanted = ench.group(2)
                     seller = search.group(3).split(' ')
-                    castle_nick = seller[0] + '.' + seller[1]
+                    castle_nick = seller[0] + '/' + seller[1]
                     goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
                                + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
                                + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
@@ -110,7 +110,7 @@ def oldest_eu():
                         name = re.sub('⚡\+\d+ ', '', name)
                         enchanted = ench.group(2)
                     seller = search.group(3).split(' ')
-                    castle_nick = seller[0] + '.' + seller[1]
+                    castle_nick = seller[0] + '/' + seller[1]
                     goo.append(str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
                                + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
                                + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
