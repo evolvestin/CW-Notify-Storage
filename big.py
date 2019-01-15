@@ -131,17 +131,17 @@ def former(text):
                 enchanted = ench.group(2)
             if search.group(3):
                 quality = search.group(3)
-            seller = search.group(3).split(' ')
+            seller = search.group(4).split(' ')
             castle_nick = seller[0] + '/' + seller[1]
-            status = search.group(11)
+            status = search.group(12)
             if status == 'Failed':
                 status = 'Cancelled'
             elif status == '#active':
                 status = 'Finished'
             goo.append(str(old) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + quality + '/' + castle_nick
-                       + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
-                       + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
-                       + '/' + search.group(10) + '/' + status)
+                       + '/' + search.group(5) + '/' + search.group(6) + '/' + search.group(7)
+                       + '/' + search.group(8) + '/' + search.group(9) + '/' + search.group(10)
+                       + '/' + search.group(11) + '/' + status)
         else:
             goo.append('active')
     else:
@@ -175,7 +175,7 @@ def oldest():
                     data1.update_cell(1, 1, old)
 
         except Exception as e:
-            bot.send_message(idMe, 'вылет oldest')
+            bot.send_message(idMe, 'вылет oldest\n' + str(e))
             sleep(0.9)
 
 
