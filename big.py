@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import telebot
@@ -14,127 +15,167 @@ import random
 
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds1 = ServiceAccountCredentials.from_json_keyfile_name('bigdata1.json', scope)
-creds2 = ServiceAccountCredentials.from_json_keyfile_name('bigdata2.json', scope)
+#creds2 = ServiceAccountCredentials.from_json_keyfile_name('bigdata2.json', scope)
 #creds3 = ServiceAccountCredentials.from_json_keyfile_name('worker5-storage.json', scope)
 client1 = gspread.authorize(creds1)
-client2 = gspread.authorize(creds2)
+#client2 = gspread.authorize(creds2)
 #client3 = gspread.authorize(creds3)
-data1 = client1.open('storage-generator').worksheet('old2')
-data2 = client2.open('eustgen').worksheet('old2')
+data1 = client1.open('new-storage').worksheet('old')
+#data2 = client2.open('eustgen').worksheet('old2')
 
 bot = telebot.TeleBot('468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c')
 idMe = 396978030
-old2_ru = int(data1.cell(1, 1).value)
-old2_eu = int(data2.cell(1, 1).value)
+old = int(data1.cell(1, 1).value)
 firstopen = 1
-form_ru = 'Лот #(\d+) : (.*)\n' \
-       'Продавец: (.*)\n' \
-       'Текущая цена: (\d+) 👝\n' \
-       'Покупатель: (.+)\n' \
-       'Срок: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
-       'Статус: (#active|Finished|Cancelled|Failed)'
-form_eu = 'Lot #(\d+) : (.*)\n' \
-       'Seller: (.*)\n' \
-       'Current price: (\d+) pouch\(es\)\n' \
-       'Buyer: (.+)\n' \
-       'End At: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
-       'Status: (#active|Finished|Cancelled|Failed)'
+form = 'Лот #(\d+) : (.*)\n' \
+    '\S*\s?(.*)\n?' \
+    'Продавец: (.*)\n' \
+    'Текущая цена: (\d+) 👝\n' \
+    'Покупатель: (.+)\n' \
+    'Срок: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
+    'Статус: (#active|Finished|Cancelled|Failed)'
 # ====================================================================================
-bot.send_message(idMe, '👀')
+bot.send_message(idMe, '🧐')
 
 
-def oldest_ru():
+def my_time(search):
+    day31 = 31 * 24 * 60 * 60
+    day30 = 30 * 24 * 60 * 60
+    day28 = 28 * 24 * 60 * 60
+    stamp = int(datetime.now().timestamp())
+    sec = ((stamp + (2 * 60 * 60) - 1530309600) * 3)
+    if str(search.group(8)) == 'Wīndume':
+        month = '10'
+    elif str(search.group(8)) == 'Herbist':
+        month = '11'
+    elif str(search.group(8)) == 'Hailag':
+        month = '12'
+    elif str(search.group(8)) == 'Wintar':
+        month = '01'
+    elif str(search.group(8)) == 'Hornung':
+        month = '02'
+    elif str(search.group(8)) == 'Lenzin':
+        month = '03'
+    elif str(search.group(8)) == 'Ōstar':
+        month = '04'
+    elif str(search.group(8)) == 'Winni':
+        month = '05'
+    elif str(search.group(8)) == 'Brāh':
+        month = '06'
+    elif str(search.group(8)) == 'Hewi':
+        month = '07'
+    elif str(search.group(8)) == 'Aran':
+        month = '08'
+    elif str(search.group(8)) == 'Witu':
+        month = '09'
+    else:
+        month = 'none'
+
+    if month != 'none':
+        day28 = 28 * 24 * 60 * 60
+        seconds = 0 - (24 * 60 * 60)
+        if int(search.group(9)) == 4:
+            day28 = day28 + 24 * 60 * 60
+        elif int(search.group(9)) > 4:
+            seconds = seconds + 24 * 60 * 60
+        seconds = seconds + day30 + day31 + 31536000 * (int(search.group(9)) - 1)  # Wīndume
+        if int(month) == 1:
+            seconds = seconds
+        elif int(month) == 2:
+            seconds = seconds + day31
+        elif int(month) == 3:
+            seconds = seconds + day31 + day28
+        elif int(month) == 4:
+            seconds = seconds + day31 + day28 + day31
+        elif int(month) == 5:
+            seconds = seconds + day31 + day28 + day31 + day30
+        elif int(month) == 6:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31
+        elif int(month) == 7:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30
+        elif int(month) == 8:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31
+        elif int(month) == 9:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31
+        elif int(month) == 10:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30
+        elif int(month) == 11:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31
+            if int(search.group(9)) == 0:
+                seconds = 0 - (24 * 60 * 60)
+        elif int(month) == 12:
+            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31 + day30
+            if int(search.group(9)) == 0:
+                seconds = day30 - (24 * 60 * 60)
+
+        seconds = seconds + int(search.group(7)) * 24 * 60 * 60  # days
+        seconds = seconds + int(search.group(10)) * 60 * 60  # hours
+        seconds = seconds + int(search.group(11)) * 60  # minutes
+        stack = int(stamp + (seconds - sec) / 3)
+        return stack
+
+
+def former(text):
+    search = re.search(form, str(text.text))
+    goo = []
+    if search:
+        stamp = my_time(search)
+        stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
+        if str(search.group(12)) != '#active' or (str(search.group(12)) == '#active' and stamp <= stamp_now):
+            name = str(search.group(2))
+            ench = re.search('(⚡)\+(\d+) ', name)
+            enchanted = 'none'
+            quality = 'none'
+            if ench:
+                name = re.sub('⚡\+\d+ ', '', name)
+                enchanted = ench.group(2)
+            if search.group(3):
+                quality = search.group(3)
+            seller = search.group(3).split(' ')
+            castle_nick = seller[0] + '/' + seller[1]
+            status = search.group(11)
+            if status == 'Failed':
+                status = 'Cancelled'
+            elif status == '#active':
+                status = 'Finished'
+            goo.append(str(old) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + quality + '/' + castle_nick
+                       + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
+                       + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
+                       + '/' + search.group(10) + '/' + status)
+        else:
+            goo.append('active')
+    else:
+        goo.append('false')
+    return goo
+
+
+def oldest():
     while True:
         try:
             sleep(3)
             global data1
-            global old2_ru
-            goo = []
-            text = requests.get('https://t.me/chatwars3/' + str(old2_ru))
-            search = re.search(form_ru, str(text.text))
-            if search:
-                if str(search.group(11)) != '#active':
-                    print('работаю https://t.me/chatwars3/' + str(old2_ru))
-                    name = str(search.group(2))
-                    ench = re.search('(⚡)\+(\d+) ', name)
-                    enchanted = 'no'
-                    if ench:
-                        name = re.sub('⚡\+\d+ ', '', name)
-                        enchanted = ench.group(2)
-                    seller = search.group(3).split(' ')
-                    castle_nick = seller[0] + '/' + seller[1]
-                    status = search.group(11)
-                    if status == 'Failed':
-                        status = 'Cancelled'
-                    goo.append(str(old2_ru) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
-                               + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
-                               + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
-                               + '/' + search.group(10) + '/' + status)
-                    old2_ru = old2_ru + 1
-                    try:
-                        data1.update_cell(1, 1, old2_ru)
-                        data1.insert_row(goo, 2)
-                    except:
-                        creds1 = ServiceAccountCredentials.from_json_keyfile_name('bigdata1.json', scope)
-                        client1 = gspread.authorize(creds1)
-                        data1 = client1.open('storage-generator').worksheet('old2')
-                        data1.update_cell(1, 1, old2_ru)
-                        data1.insert_row(goo, 2)
-                else:
-                    print('https://t.me/chatwars3/' + str(old2_ru) + ' Активен, ничего не делаю')
-
-        except Exception as e:
-            bot.send_message(idMe, 'вылет oldest_ru')
-            sleep(0.9)
-
-
-def oldest_eu():
-    while True:
-        try:
-            global firstopen
-            if firstopen != 1:
-                sleep(3)
+            global old
+            text = requests.get('https://t.me/chatwars3/' + str(old))
+            print('работаю https://t.me/chatwars3/' + str(old))
+            goo = former(text)
+            if goo[0] == 'active':
+                print('https://t.me/chatwars3/' + str(old) + ' Активен, ничего не делаю')
+            elif goo[0] == 'false':
+                print('https://t.me/chatwars3/' + str(old) + ' Форму не нашло')
             else:
-                sleep(5)
-                firstopen = 0
-            global data1
-            global old2_eu
-            goo = []
-            text = requests.get('https://t.me/ChatWarsAuction/' + str(old2_eu))
-            search = re.search(form_eu, str(text.text))
-            if search:
-                if str(search.group(11)) != '#active':
-                    print('работаю https://t.me/ChatWarsAuction/' + str(old2_eu))
-                    name = str(search.group(2))
-                    ench = re.search('(⚡)\+(\d+) ', name)
-                    enchanted = 'no'
-                    if ench:
-                        name = re.sub('⚡\+\d+ ', '', name)
-                        enchanted = ench.group(2)
-                    seller = search.group(3).split(' ')
-                    castle_nick = seller[0] + '/' + seller[1]
-                    status = search.group(11)
-                    if status == 'Failed':
-                        status = 'Cancelled'
-                    goo.append(str(old2_eu) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + castle_nick
-                               + '/' + search.group(4) + '/' + search.group(5) + '/' + search.group(6)
-                               + '/' + search.group(7) + '/' + search.group(8) + '/' + search.group(9)
-                               + '/' + search.group(10) + '/' + status)
-                    old2_eu = old2_eu + 1
-                    try:
-                        data2.update_cell(1, 1, old2_eu)
-                        data2.insert_row(goo, 2)
-                    except:
-                        creds2 = ServiceAccountCredentials.from_json_keyfile_name('bigdata2.json', scope)
-                        client2 = gspread.authorize(creds2)
-                        data2 = client2.open('eustgen').worksheet('old2')
-                        data2.update_cell(1, 1, old2_eu)
-                        data2.insert_row(goo, 2)
-                else:
-                    print('https://t.me/ChatWarsAuction/' + str(old2_eu) + ' Активен, ничего не делаю')
+                old = old + 1
+                try:
+                    data1.insert_row(goo, 2)
+                    data1.update_cell(1, 1, old)
+                except:
+                    creds1 = ServiceAccountCredentials.from_json_keyfile_name('bigdata1.json', scope)
+                    client1 = gspread.authorize(creds1)
+                    data1 = client1.open('new-storage').worksheet('old')
+                    data1.insert_row(goo, 2)
+                    data1.update_cell(1, 1, old)
 
         except Exception as e:
-            bot.send_message(idMe, 'вылет oldest_eu')
+            bot.send_message(idMe, 'вылет oldest')
             sleep(0.9)
 
 
@@ -156,6 +197,5 @@ def telepol():
 
 
 if __name__ == '__main__':
-    _thread.start_new_thread(oldest_ru, ())
-    _thread.start_new_thread(oldest_eu, ())
+    _thread.start_new_thread(oldest, ())
     telepol()
