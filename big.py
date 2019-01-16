@@ -165,7 +165,7 @@ def oldest():
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
             else:
-                print(dim.adress + str(checker) + ' В черном списке, пропускаю')
+                print(dim.adress + str(old) + ' В черном списке, пропускаю')
                 old = old + 1
 
         except Exception as e:
