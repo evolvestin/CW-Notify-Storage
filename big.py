@@ -21,7 +21,7 @@ data1 = client1.open(dim.file).worksheet('old')
 
 bot = telebot.TeleBot(dim.token)
 idMe = 396978030
-ignore = int(data1.cell(1, 1).value)
+ignore = str(data1.cell(1, 1).value)
 old = int(data1.cell(2, 1).value)
 ignore = ignore.split('/')
 # ====================================================================================
