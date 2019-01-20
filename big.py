@@ -259,7 +259,6 @@ def messages():
                 min_30 = 1000
                 max_30 = 0
                 col = db.get_lots(const[i])
-                print(col)
                 if str(col) != 'False':
                     for z in col:
                         cost = z[7]
