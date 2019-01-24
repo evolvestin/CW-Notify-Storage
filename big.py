@@ -238,7 +238,7 @@ def checker():
             cell_list = data1.range('A' + str(cock) + ':A' + str(cock + col))
             cock += col
             i = 1
-            while (i % (col + 1)) != 0 and old >= 32:
+            while (i % (col + 1)) != 0 and old >= 5:
                 sleep(0.01)
                 text = requests.get(dim.adress + str(old))
                 print('работаю ' + dim.adress + str(old))
