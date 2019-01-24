@@ -227,18 +227,19 @@ def former_old(text, id, type):
 def checker():
     while True:
         try:
-            sleep(3)
             global data1
             global old
             global cock
+            print(log(0))
             creds1 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_old, scope)
             client1 = gspread.authorize(creds1)
             data1 = client1.open(dim.file).worksheet('old')
             col = 1000
             cell_list = data1.range('A' + str(cock) + ':A' + str(cock + col))
+            cock += col
             i = 1
             while (i % (col + 1)) != 0 and old >= 32:
-                sleep(0.1)
+                sleep(0.05)
                 text = requests.get(dim.adress + str(old))
                 print('работаю ' + dim.adress + str(old))
                 if str(old) not in ignore:
@@ -255,8 +256,7 @@ def checker():
                     print(dim.adress + str(old) + ' В черном списке, пропускаю')
                     old -= 1
             if i > 1:
-                cock += col
-                string = str(old) + '/' + str(cock + col)
+                string = str(old) + '/' + str(cock)
                 try:
                     data1.update_cells(cell_list)
                     data1.update_cell(2, 1, string)
