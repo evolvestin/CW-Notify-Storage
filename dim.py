@@ -1,12 +1,14 @@
-token = '468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c'
-file = 'new-storage'
-json_old = 'bigdata1.json'
+token = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
+file = 'new-eustorage'
+json_old = 'bigdata2.json'
 json_storage = 'bigdata4.json'
-form = 'Лот #(\d+) : (.*)\n' \
-    '\S*\s?(.*)\n?' \
-    'Продавец: (.*)\n' \
-    'Текущая .+: (\d+) 👝\n' \
-    'Покупатель: (.+)\n' \
-    'Срок: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
-    'Статус: (#active|Finished|Cancelled|Failed)'
-adress = 'https://t.me/chatwars3/'
+form = 'Lot #(\d+) : (.*)\n' \
+       '\S*\s?(.*)\n?' \
+       'Seller: (.*)\n' \
+       'Current price: (\d+) pouch\(es\)\n' \
+       'Buyer: (.+)\n' \
+       'End At: (\d\d) (.*) (.*) (\d\d):(\d\d)\n' \
+       'Status: (#active|Finished|Cancelled|Failed)'
+adress = 'https://t.me/ChatWarsAuction/'
+
+
