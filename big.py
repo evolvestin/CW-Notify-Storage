@@ -25,7 +25,7 @@ bot = telebot.TeleBot(dim.token)
 idMe = 396978030
 ignore = str(data1.cell(1, 1).value)
 old = int(data1.cell(2, 1).value)
-check = 32
+check = 1999
 ignore = ignore.split('/')
 
 # ====================================================================================
@@ -194,7 +194,7 @@ def checker():
                 google = data1.col_values(1)
             while check < old:
                 if (check % 1000) == 0:
-                    bot.send_message(idMe, '🥳: ' + str(check) + ' пройдено')
+                    bot.send_message(idMe, log(0) + '🥳: ' + str(check) + ' пройдено')
                 text = requests.get(dim.adress + str(check))
                 sleep(0.01)
                 print('проверяю наличие ' + dim.adress + str(check))
