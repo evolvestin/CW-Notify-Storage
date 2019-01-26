@@ -1,4 +1,4 @@
-token = '468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c'
+token = '512299506:AAGwDkft8yr0dSknOC8gCdf_cFU6civ3jls'
 file = 'new-storage'
 json_old = 'bigdata1.json'
 json_storage = 'bigdata4.json'
