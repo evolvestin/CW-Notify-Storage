@@ -25,7 +25,7 @@ bot = telebot.TeleBot(dim.token)
 idMe = 396978030
 ignore = str(data1.cell(1, 1).value)
 old = int(data1.cell(2, 1).value)
-check = 8999
+check = 149999
 ignore = ignore.split('/')
 
 # ====================================================================================
