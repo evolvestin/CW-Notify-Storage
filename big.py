@@ -405,66 +405,67 @@ def google_updater():
             db_new = SQLighter('new.db')
             if firstopen == 1:
                 sleep(10)
-            try:
-                google = data5.col_values(1)
-            except:
-                creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                client5 = gspread.authorize(creds5)
-                data5 = client5.open(dim.file).worksheet('active')
-                google = data5.col_values(1)
-            sleep(2)
-            try:
-                auid_raw = db_new.get_new_auid()
-            except:
+            if firstopen != 1:
+                try:
+                    google = data5.col_values(1)
+                except:
+                    creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
+                    client5 = gspread.authorize(creds5)
+                    data5 = client5.open(dim.file).worksheet('active')
+                    google = data5.col_values(1)
                 sleep(2)
-                auid_raw = db_new.get_new_auid()
-            auid = []
-            if str(auid_raw) != 'False':
-                for g in auid_raw:
-                    auid.append(g[0])
-            for i in auid:
-                if str(i) not in google:
-                    try:
-                        data5.insert_row([int(i)], 1)
-                    except:
-                        creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                        client5 = gspread.authorize(creds5)
-                        data5 = client5.open(dim.file).worksheet('active')
-                        data5.insert_row([int(i)], 1)
-                    sleep(1)
-            print(thread_name + ' добавил новые лоты в google')
-
-            try:
-                google = data5.col_values(1)
-            except:
-                creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                client5 = gspread.authorize(creds5)
-                data5 = client5.open(dim.file).worksheet('active')
-                google = data5.col_values(1)
-            sleep(2)
-            try:
-                auid_raw = db_new.get_new_auid()
-            except:
-                sleep(2)
-                auid_raw = db_new.get_new_auid()
-            auid = []
-            if str(auid_raw) != 'False':
-                for g in auid_raw:
-                    auid.append(g[0])
-            count = 1
-            for i in google:
-                if i != '':
-                    if int(i) not in auid:
+                try:
+                    auid_raw = db_new.get_new_auid()
+                except:
+                    sleep(2)
+                    auid_raw = db_new.get_new_auid()
+                auid = []
+                if str(auid_raw) != 'False':
+                    for g in auid_raw:
+                        auid.append(g[0])
+                for i in auid:
+                    if str(i) not in google:
                         try:
-                            data5.delete_row(google.index(i) + count)
+                            data5.insert_row([int(i)], 1)
                         except:
                             creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
                             client5 = gspread.authorize(creds5)
                             data5 = client5.open(dim.file).worksheet('active')
-                            data5.delete_row(google.index(i) + count)
-                        sleep(1)
-                        count -= 1
-            print(thread_name + ' удалил закончившиеся из google')
+                            data5.insert_row([int(i)], 1)
+                        sleep(2)
+                print(thread_name + ' добавил новые лоты в google')
+
+                try:
+                    google = data5.col_values(1)
+                except:
+                    creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
+                    client5 = gspread.authorize(creds5)
+                    data5 = client5.open(dim.file).worksheet('active')
+                    google = data5.col_values(1)
+                sleep(2)
+                try:
+                    auid_raw = db_new.get_new_auid()
+                except:
+                    sleep(2)
+                    auid_raw = db_new.get_new_auid()
+                auid = []
+                if str(auid_raw) != 'False':
+                    for g in auid_raw:
+                        auid.append(g[0])
+                count = 1
+                for i in google:
+                    if i != '':
+                        if int(i) not in auid:
+                            try:
+                                data5.delete_row(google.index(i) + count)
+                            except:
+                                creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
+                                client5 = gspread.authorize(creds5)
+                                data5 = client5.open(dim.file).worksheet('active')
+                                data5.delete_row(google.index(i) + count)
+                            sleep(2)
+                            count -= 1
+                print(thread_name + ' удалил закончившиеся из google')
 
         except Exception as e:
             thread_name = 'google_updater '
