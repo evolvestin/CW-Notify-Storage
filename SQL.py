@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import sqlite3
 
 
@@ -19,26 +19,45 @@ class SQLighter:
                                 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                 (auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status,))
 
+    def create_new_lot(self, auid):
+        with self.connection:
+            self.cursor.execute('INSERT INTO actives (auid) VALUES (?)', (auid,))
+
     def create_lots(self, sqls):
         with self.connection:
             self.cursor.execute(sqls)
 
-    def update_users(self, id, usernick, fullscore, score, lasttime, updates):
+    def delete_new_lot(self, auid):
         with self.connection:
-            self.cursor.execute('UPDATE users SET usernick=?, fullscore=?, score=?, lasttime=?, updates=? WHERE id = ?',
-                                (usernick, fullscore, score, lasttime, updates, id,))
-
-    def get_lot(self, id):
-        with self.connection:
-            result = self.cursor.execute('SELECT * FROM actives WHERE id = ?', (id,)).fetchall()
-        if result:
-            return result[0]
-        else:
-            return False
+            self.cursor.execute('DELETE FROM actives WHERE auid = ?', (auid,))
 
     def get_lots(self, name):
         with self.connection:
             result = self.cursor.execute('SELECT * FROM old WHERE name = ? ORDER BY stamp', (name,)).fetchall()
+        if result:
+            return result
+        else:
+            return False
+
+    def get_quality(self, name):
+        with self.connection:
+            result = self.cursor.execute('SELECT DISTINCT quality FROM old WHERE name = ?', (name,)).fetchall()
+        if result:
+            return result
+        else:
+            return False
+
+    def get_new_auid(self):
+        with self.connection:
+            result = self.cursor.execute('SELECT auid FROM actives').fetchall()
+        if result:
+            return result
+        else:
+            return False
+
+    def get_auid(self):
+        with self.connection:
+            result = self.cursor.execute('SELECT auid FROM old').fetchall()
         if result:
             return result
         else:
