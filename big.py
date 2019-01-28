@@ -632,7 +632,6 @@ def checker():
         try:
             sleep(10)
             global data1
-            global old
             global check
             thread_name = 'checker '
             print(thread_name + 'начало')
@@ -644,7 +643,7 @@ def checker():
                 data1 = client1.open(dim.file).worksheet('old')
                 google = data1.col_values(1)
             check -= 1000
-            while check < old:
+            while check < int(google[1]):
                 sleep(2)
                 text = requests.get(dim.adress + str(check))
                 print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
