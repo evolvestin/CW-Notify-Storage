@@ -122,7 +122,9 @@ start_string = 'INSERT INTO old (auid, lotid, enchanted, name, quality, castle, 
     'VALUES '
 string = ''
 point = 0
+perk = 3
 for i in google:
+    perk += 1
     row = i.split('/')
     if len(row) > 1:
         timer_array = [row[9], row[10], row[11], row[12], row[13]]
@@ -138,7 +140,8 @@ for i in google:
             string = ''
             point = 0
     else:
-        print(google.index(i))
+        bot.send_message(idMe, 'В базе ' + dim.file + ' нежелательный элемент за номером ' + str(perk) +
+                         ' сотворил злую шутку, исправь')
         continue
 if string != '':
     string = string.rstrip()
