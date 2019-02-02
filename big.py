@@ -33,7 +33,7 @@ def timer(array):
     day30 = 30 * 24 * 60 * 60
     day28 = 28 * 24 * 60 * 60
     stamp = int(datetime.now().timestamp())
-    sec = ((stamp + (2 * 60 * 60) - 1530309600) * 3)
+    sec = ((stamp + (dim.server * 60 * 60) - 1530309600) * 3)
     if str(array[1]) == 'Wīndume':
         month = '10'
     elif str(array[1]) == 'Herbist':
