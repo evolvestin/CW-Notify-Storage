@@ -1,4 +1,5 @@
 token = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
+server = 1
 file = 'eustorage'
 json_old = 'eustorage1.json'
 json_storage_supp = 'eustorage3.json'
