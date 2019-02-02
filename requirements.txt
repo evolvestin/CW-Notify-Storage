@@ -15,3 +15,6 @@ virtualenv==15.1.0
 virtualenv-clone==0.2.6
 oauth2client
 gspread>=2.0.0
+unicodedata
+unidecode
+sys
