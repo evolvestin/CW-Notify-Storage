@@ -484,7 +484,7 @@ def messages():
             creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
             client2 = gspread.authorize(creds2)
             client3 = gspread.authorize(creds3)
-            data2 = client2.open('Active-Info').worksheet('const')
+            data2 = client2.open('Info').worksheet('const')
             data3 = client3.open(dim.file).worksheet('storage')
             const_pre = data2.col_values(2)
             sleep(1)
