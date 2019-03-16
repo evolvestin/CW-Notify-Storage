@@ -129,8 +129,8 @@ for i in google:
     if len(row) > 1:
         timer_array = [row[9], row[10], row[11], row[12], row[13]]
         stamp = timer(timer_array)
-        string += "('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'), ".format(
-            row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], stamp, row[14])
+        string += "('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'), ".format(row[0], row[1],
+            row[2], re.sub(' \+\d+[⚔🛡💧]', '', row[3]), row[4], row[5], row[6], row[7], row[8], stamp, row[14])
         point += 1
         if point == 1000:
             string = string.rstrip()
