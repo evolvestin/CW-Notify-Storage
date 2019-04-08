@@ -24,6 +24,7 @@ data1 = client1.open(dim.file).worksheet('old')
 
 bot = telebot.TeleBot(dim.token)
 idMe = 396978030
+condition = ['Normal', 'Reinforced']
 # ====================================================================================
 
 
@@ -173,7 +174,7 @@ def former(text, id, type):
     search = re.search(dim.form, str(text.text))
     goo = []
     if search:
-        array = [search.group(7), search.group(8), search.group(9), search.group(10), search.group(11)]
+        array = [search.group(8), search.group(9), search.group(10), search.group(11), search.group(12)]
         stamp = timer(array)
         stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
         name = str(search.group(2))
@@ -184,8 +185,13 @@ def former(text, id, type):
             name = re.sub('⚡\+\d+ ', '', name)
             enchanted = ench.group(2)
         if search.group(3):
-            quality = search.group(3)
-        seller = search.group(4).split(' ')
+            if search.group(3) not in condition:
+                quality = search.group(3)
+            else:
+                quality += '.' + search.group(3)
+        if search.group(4):
+            quality += '.' + search.group(4)
+        seller = search.group(5).split(' ')
         if len(seller) == 2:
             castle_nick = seller[0] + '/' + seller[1]
         else:
@@ -195,21 +201,21 @@ def former(text, id, type):
                     nick += j + ' '
             nick = nick.rstrip()
             castle_nick = seller[0] + '/' + nick
-        status = search.group(12)
+        status = search.group(13)
         if status == 'Failed':
             status = 'Cancelled'
         text = str(id) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + quality \
-            + '/' + castle_nick + '/' + search.group(5) + '/' + search.group(6) + '/' + search.group(7) \
-            + '/' + search.group(8) + '/' + search.group(9) + '/' + search.group(10) + '/' + search.group(11) + '/'
+            + '/' + castle_nick + '/' + search.group(6) + '/' + search.group(7) + '/' + search.group(8) \
+            + '/' + search.group(9) + '/' + search.group(10) + '/' + search.group(11) + '/' + search.group(12) + '/'
         if type == 'old':
-            if str(search.group(12)) != '#active' or (str(search.group(12)) == '#active' and stamp <= stamp_now):
+            if str(search.group(13)) != '#active' or (str(search.group(13)) == '#active' and stamp <= stamp_now):
                 if status == '#active':
                     status = 'Finished'
                 goo.append(text + status)
             else:
                 goo.append('active')
         else:
-            if str(search.group(12)) == '#active' and stamp >= stamp_now:
+            if str(search.group(13)) == '#active' and stamp >= stamp_now:
                 goo.append(text + status)
             else:
                 if status == '#active':
@@ -497,7 +503,10 @@ def messages():
                 if str(qualities_raw) != 'False':
                     qualities = []
                     for f in qualities_raw:
-                        qualities.append(f[0])
+                        splited = f[0]
+                        splited = splited.split('.')
+                        if splited[0] not in qualities:
+                            qualities.append(splited[0])
                     for f in qualities:
                         if f != 'none':
                             const2.append(g + '/' + f)
@@ -522,7 +531,8 @@ def messages():
                 col = db.get_lots(splited[0])
                 if str(col) != 'False':
                     for z in col:
-                        quality = z[4]
+                        qua = z[4].split('.')
+                        quality = qua[0]
                         cost = z[7]
                         buyer = z[8]
                         stamp = z[9]
@@ -653,7 +663,7 @@ def checker():
                 print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
                 if str(check) not in ignore:
                     goo = former(text, check, 'old')
-                    if goo[0] == 'active' or goo[0] == 'false':
+                    if goo[0] == 'active':
                         bot.send_message(idMe, '🧐\n' + dim.adress + str(check) +
                                          '\n\n' + str(goo[0]) + '\n\nЧто-то странненькое')
                     elif goo[0] not in google:
@@ -701,7 +711,13 @@ def repeat_all_messages(message):
     if message.chat.id != idMe:
         bot.send_message(message.chat.id, 'К тебе этот бот не имеет отношения, уйди пожалуйста')
     else:
-        bot.send_message(message.chat.id, 'Я работаю')
+        if message.text == '/base':
+            doc_new = open('new.db', 'rb')
+            doc_old = open('old.db', 'rb')
+            bot.send_document(idMe, doc_new)
+            bot.send_document(idMe, doc_old)
+        else:
+            bot.send_message(message.chat.id, 'Я работаю')
 
 
 def telepol():
