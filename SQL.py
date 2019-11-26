@@ -14,7 +14,7 @@ class SQLighter:
     # current_open
     def create_lot(self, auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status):
         with self.connection:
-            self.cursor.execute('INSERT INTO old (auid, lotid, enchanted, name, quality, castle, seller, cost, '
+            self.cursor.execute('INSERT INTO old (auid, lotid, enchanted, name, quality, condition, seller, cost, '
                                 'buyer, stamp, status) '
                                 'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                                 (auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status,))
