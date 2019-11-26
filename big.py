@@ -121,6 +121,7 @@ def form_mash(lot):
     enchanted = 'none'
     condition = 'none'
     lot = re.sub('\'', '&#39;', lot)
+    stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
     splited = lot.split('/')
     for g in splited:
         title = re.search(dim.title, g)
@@ -229,7 +230,7 @@ try:
                           message_id=start_message.message_id, parse_mode='HTML')
 except:
     draw += '\n<b>Старые посты из таблицы добавлены в бота.\nНе смог отредактировать сообщение.</b>'
-    bot.send_message(idMe, draw , parse_mode='HTML')
+    bot.send_message(idMe, draw, parse_mode='HTML')
 
 
 def executive(name):
@@ -276,7 +277,7 @@ def oldest():
             global data1
             global old
             thread_name = 'oldest '
-            sleep(5)
+            sleep(1)
             text = requests.get(dim.adress + str(old) + '?embed=1')
             if str(old) not in ignore:
                 goo = former(text, old, 'old')
@@ -295,6 +296,7 @@ def oldest():
                         data1 = client1.open(dim.file).worksheet('old')
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
+                    sleep(4)
                     print(thread_name + dim.adress + str(old) + ' Добавил в google старый лот')
             else:
                 print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
