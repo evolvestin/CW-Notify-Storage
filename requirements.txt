@@ -16,3 +16,4 @@ virtualenv-clone==0.2.6
 oauth2client
 gspread>=2.0.0
 unidecode>=1.0.23
+beautifulsoup4==4.8.0
