@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import telebot
-from telebot import types
-import urllib3
 import re
-import requests
-import time
-from time import sleep
-import datetime
-from datetime import datetime
-import _thread
-import random
-import copy
-from SQL import SQLighter
 import dim
+import time
+import copy
+import _thread
+import telebot
+import gspread
+import requests
+import datetime
+import traceback
+from time import sleep
+from telebot import types
+from SQL import SQLighter
+from bs4 import BeautifulSoup
+from datetime import datetime
+from oauth2client.service_account import ServiceAccountCredentials
+
 
 stamp1 = int(datetime.now().timestamp())
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -24,114 +25,182 @@ data1 = client1.open(dim.file).worksheet('old')
 
 bot = telebot.TeleBot(dim.token)
 idMe = 396978030
-condition = ['Normal', 'Reinforced']
 # ====================================================================================
 
 
-def timer(array):
-    array[2] = array[2][3:]
-    day31 = 31 * 24 * 60 * 60
-    day30 = 30 * 24 * 60 * 60
-    day28 = 28 * 24 * 60 * 60
+def timer(search):
+    s_day = int(search.group(1))
+    s_month = str(search.group(2))
+    s_year = int(search.group(3)) - 60
+    s_hour = int(search.group(4))
+    s_minute = int(search.group(5))
     stamp = int(datetime.now().timestamp())
     sec = ((stamp + (dim.server * 60 * 60) - 1530309600) * 3)
-    if str(array[1]) == 'Wīndume':
-        month = '10'
-    elif str(array[1]) == 'Herbist':
-        month = '11'
-    elif str(array[1]) == 'Hailag':
-        month = '12'
-    elif str(array[1]) == 'Wintar':
-        month = '01'
-    elif str(array[1]) == 'Hornung':
-        month = '02'
-    elif str(array[1]) == 'Lenzin':
-        month = '03'
-    elif str(array[1]) == 'Ōstar':
-        month = '04'
-    elif str(array[1]) == 'Winni':
-        month = '05'
-    elif str(array[1]) == 'Brāh':
-        month = '06'
-    elif str(array[1]) == 'Hewi':
-        month = '07'
-    elif str(array[1]) == 'Aran':
-        month = '08'
-    elif str(array[1]) == 'Witu':
-        month = '09'
+    if s_month == 'Wintar':
+        month = 1
+    elif s_month == 'Hornung':
+        month = 2
+    elif s_month == 'Lenzin':
+        month = 3
+    elif s_month == 'Ōstar':
+        month = 4
+    elif s_month == 'Winni':
+        month = 5
+    elif s_month == 'Brāh':
+        month = 6
+    elif s_month == 'Hewi':
+        month = 7
+    elif s_month == 'Aran':
+        month = 8
+    elif s_month == 'Witu':
+        month = 9
+    elif s_month == 'Wīndume':
+        month = 10
+    elif s_month == 'Herbist':
+        month = 11
+    elif s_month == 'Hailag':
+        month = 12
     else:
-        month = 'none'
+        month = 0
 
-    if month != 'none':
+    if month != 0:
+        day31 = 31 * 24 * 60 * 60
+        day30 = 30 * 24 * 60 * 60
         day28 = 28 * 24 * 60 * 60
         seconds = 0 - (24 * 60 * 60)
-        if int(array[2]) == 4:
+        if s_year == 4:
             day28 = day28 + 24 * 60 * 60
-        elif int(array[2]) > 4:
+        elif s_year > 4:
             seconds = seconds + 24 * 60 * 60
-        seconds = seconds + day30 + day31 + 31536000 * (int(array[2]) - 1)  # Wīndume
-        if int(month) == 1:
+        seconds = seconds + day30 + day31 + 31536000 * (s_year - 1)  # Wīndume
+        if month == 1:
             seconds = seconds
-        elif int(month) == 2:
+        elif month == 2:
             seconds = seconds + day31
-        elif int(month) == 3:
+        elif month == 3:
             seconds = seconds + day31 + day28
-        elif int(month) == 4:
+        elif month == 4:
             seconds = seconds + day31 + day28 + day31
-        elif int(month) == 5:
+        elif month == 5:
             seconds = seconds + day31 + day28 + day31 + day30
-        elif int(month) == 6:
+        elif month == 6:
             seconds = seconds + day31 + day28 + day31 + day30 + day31
-        elif int(month) == 7:
+        elif month == 7:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30
-        elif int(month) == 8:
+        elif month == 8:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31
-        elif int(month) == 9:
+        elif month == 9:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31
-        elif int(month) == 10:
+        elif month == 10:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30
-        elif int(month) == 11:
+        elif month == 11:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31
-            if int(array[2]) == 0:
+            if s_year == 0:
                 seconds = 0 - (24 * 60 * 60)
-        elif int(month) == 12:
+        elif month == 12:
             seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31 + day30
-            if int(array[2]) == 0:
+            if s_year == 0:
                 seconds = day30 - (24 * 60 * 60)
 
-        seconds = seconds + int(array[0]) * 24 * 60 * 60  # days
-        seconds = seconds + int(array[3]) * 60 * 60  # hours
-        seconds = seconds + int(array[4]) * 60  # minutes
+        seconds = seconds + s_day * 24 * 60 * 60
+        seconds = seconds + s_hour * 60 * 60
+        seconds = seconds + s_minute * 60
         stack = int(stamp + (seconds - sec) / 3)
         return stack
 
 
-db = SQLighter('old.db')
-google = data1.col_values(1)
+def form_mash(lot):
+    lotid = 0
+    stamp = 0
+    name = 'none'
+    cost = 'none'
+    buyer = 'none'
+    status = 'none'
+    seller = 'none'
+    quality = 'none'
+    enchanted = 'none'
+    condition = 'none'
+    lot = re.sub('\'', '&#39;', lot)
+    splited = lot.split('/')
+    for g in splited:
+        title = re.search(dim.title, g)
+        quali = re.search(dim.quali, g)
+        condi = re.search(dim.condi, g)
+        price = re.search(dim.price, g)
+        sell = re.search(dim.seller, g)
+        whobuy = re.search(dim.buys, g)
+        ptime = re.search(dim.stamp, g)
+        stat = re.search(dim.status, g)
+        if title:
+            lotid = title.group(1)
+            name = re.sub(' \+\d+[⚔🛡💧]', '', title.group(2))
+            ench = re.search('(⚡)\+(\d+) ', name)
+            enchanted = 'none'
+            if ench:
+                name = re.sub('⚡\+\d+ ', '', name)
+                enchanted = ench.group(2)
+        if quali:
+            quality = quali.group(1)
+        if condi:
+            condition = re.sub(' ⏰.*', '', condi.group(1))
+        if sell:
+            seller = sell.group(1)
+        if price:
+            cost = int(price.group(1))
+        if whobuy:
+            buyer = whobuy.group(1)
+        if ptime:
+            stamp = timer(ptime)
+        if stat:
+            status = stat.group(1)
+            if status == 'Failed':
+                status = 'Cancelled'
+            if status == '#active':
+                if stamp < stamp_now:
+                    status = 'Finished'
+    return [splited[0], lotid, enchanted, name, quality, condition, seller, cost, buyer, stamp, status]
 
+
+def log(stamp):
+    if stamp == 0:
+        stamp = int(datetime.now().timestamp())
+    day = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%d')
+    month = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%m')
+    year = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%Y')
+    hours = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%H')
+    minutes = datetime.utcfromtimestamp(int(stamp)).strftime('%M')
+    seconds = datetime.utcfromtimestamp(int(stamp)).strftime('%S')
+    message = str(day) + '.' + str(month) + '.' + str(year) + ' ' + str(hours) + ':' \
+        + str(minutes) + ':' + str(seconds)
+    return message
+
+
+start_string = 'INSERT INTO old (auid, lotid, enchanted, name, quality, ' \
+               'condition, seller, cost, buyer, stamp, status) VALUES '
+stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
+google = data1.col_values(1)
+db = SQLighter('old.db')
 ignore = str(google[0])
+ignore = ignore.split('/')
 old = int(google[1])
 new = copy.copy(old)
 check = copy.copy(old)
 firstopen = 1
-ignore = ignore.split('/')
-
-
 google.pop(0)
 google.pop(0)
-start_string = 'INSERT INTO old (auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status) ' \
-    'VALUES '
 string = ''
 point = 0
 perk = 3
+# ====================================================================================
+start_message = bot.send_message(idMe, '<code>' + log(stamp1) + '\n' + log(0) + '</code>', parse_mode='HTML')
+
+
 for i in google:
     perk += 1
-    row = i.split('/')
-    if len(row) > 1:
-        timer_array = [row[9], row[10], row[11], row[12], row[13]]
-        stamp = timer(timer_array)
-        string += "('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'), ".format(row[0], row[1],
-            row[2], re.sub(' \+\d+[⚔🛡💧]', '', row[3]), row[4], row[5], row[6], row[7], row[8], stamp, row[14])
+    if len(i) > 0:
+        row = form_mash(i)
+        string += "('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'), "\
+            .format(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
         point += 1
         if point == 1000:
             string = string.rstrip()
@@ -152,75 +221,50 @@ if string != '':
     string = ''
 
 
-def log(stamp):
-    if stamp == 0:
-        stamp = int(datetime.now().timestamp())
-    day = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%d')
-    month = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%m')
-    year = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%Y')
-    hours = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%H')
-    minutes = datetime.utcfromtimestamp(int(stamp)).strftime('%M')
-    seconds = datetime.utcfromtimestamp(int(stamp)).strftime('%S')
-    message = str(day) + '.' + str(month) + '.' + str(year) + ' ' + str(hours) + ':' \
-        + str(minutes) + ':' + str(seconds)
-    return message
-
-
 # ====================================================================================
-bot.send_message(idMe, '<code>' + log(stamp1) + '\n' + log(0) + '</code>', parse_mode='HTML')
+
+draw = '<code>' + start_message.text + '\n' + log(0) + '</code>'
+try:
+    bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
+                          message_id=start_message.message_id, parse_mode='HTML')
+except:
+    draw += '\n<b>Старые посты из таблицы добавлены в бота.\nНе смог отредактировать сообщение.</b>'
+    bot.send_message(idMe, draw , parse_mode='HTML')
+
+
+def executive(name):
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
+    error = ''
+    for i in error_raw:
+        error += str(i)
+    bot.send_message(idMe, 'Вылет ' + name + '\n' + error)
+    _thread.exit()
 
 
 def former(text, id, type):
-    search = re.search(dim.form, str(text.text))
     goo = []
-    if search:
-        array = [search.group(8), search.group(9), search.group(10), search.group(11), search.group(12)]
-        stamp = timer(array)
+    soup = BeautifulSoup(text.text, 'html.parser')
+    is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
+    if str(is_post_not_exist) == str(None):
         stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
-        name = str(search.group(2))
-        ench = re.search('(⚡)\+(\d+) ', name)
-        enchanted = 'none'
-        quality = 'none'
-        if ench:
-            name = re.sub('⚡\+\d+ ', '', name)
-            enchanted = ench.group(2)
-        if search.group(3):
-            if search.group(3) not in condition:
-                quality = search.group(3)
-            else:
-                quality += '.' + search.group(3)
-        if search.group(4):
-            quality += '.' + search.group(4)
-        seller = search.group(5).split(' ')
-        if len(seller) == 2:
-            castle_nick = seller[0] + '/' + seller[1]
-        else:
-            nick = ''
-            for j in seller:
-                if seller.index(j) != 0:
-                    nick += j + ' '
-            nick = nick.rstrip()
-            castle_nick = seller[0] + '/' + nick
-        status = search.group(13)
-        if status == 'Failed':
-            status = 'Cancelled'
-        text = str(id) + '/' + str(search.group(1)) + '/' + enchanted + '/' + name + '/' + quality \
-            + '/' + castle_nick + '/' + search.group(6) + '/' + search.group(7) + '/' + search.group(8) \
-            + '/' + search.group(9) + '/' + search.group(10) + '/' + search.group(11) + '/' + search.group(12) + '/'
+        string = str(soup.find('div', class_='tgme_widget_message_text js-message_text'))
+        string = re.sub(' (dir|class|style)=\\"\w+[^\\"]+\\"', '', string)
+        string = re.sub('(<b>|</b>|<i>|</i>|<div>|</div>)', '', string)
+        string = re.sub('/', '&#47;', string)
+        string = re.sub('(<br&#47;>)', '/', string)
+        string = str(id) + '/' + string
+
         if type == 'old':
-            if str(search.group(13)) != '#active' or (str(search.group(13)) == '#active' and stamp <= stamp_now):
-                if status == '#active':
-                    status = 'Finished'
-                goo.append(text + status)
+            drop_time = soup.find('time', class_='datetime')
+            stamp = int(
+                time.mktime(datetime.strptime(str(drop_time['datetime']), '%Y-%m-%dT%H:%M:%S+00:00').timetuple()))
+            if stamp <= stamp_now:
+                goo.append(string)
             else:
                 goo.append('active')
         else:
-            if str(search.group(13)) == '#active' and stamp >= stamp_now:
-                goo.append(text + status)
-            else:
-                if status == '#active':
-                    status = 'Finished'
-                goo.append(text + status)
+            goo = form_mash(string)
     else:
         goo.append('false')
     return goo
@@ -232,8 +276,8 @@ def oldest():
             global data1
             global old
             thread_name = 'oldest '
-            sleep(3)
-            text = requests.get(dim.adress + str(old))
+            sleep(5)
+            text = requests.get(dim.adress + str(old) + '?embed=1')
             if str(old) not in ignore:
                 goo = former(text, old, 'old')
                 if goo[0] == 'active':
@@ -256,10 +300,9 @@ def oldest():
                 print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
                 old = old + 1
 
-        except Exception as e:
-            thread_name = 'oldest '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'oldest'
+            executive(thread_name)
 
 
 def detector():
@@ -278,7 +321,7 @@ def detector():
                 google = data5.col_values(1)
                 for i in google:
                     if i != '':
-                        text = requests.get(dim.adress + i)
+                        text = requests.get(dim.adress + i + '?embed=1')
                         sleep(0.01)
                         try:
                             auid_raw = db_new.get_new_auid()
@@ -290,24 +333,22 @@ def detector():
                             for g in auid_raw:
                                 auid.append(g[0])
                         goo = former(text, int(i), 'new')
-                        row = goo[0].split('/')
-                        if row[0] != 'false':
-                            if row[14] == '#active' and int(row[0]) not in auid:
+                        if goo[0] != 'false':
+                            if goo[10] == '#active' and int(goo[0]) not in auid:
                                 try:
-                                    db_new.create_new_lot(row[0])
+                                    db_new.create_new_lot(goo[0])
                                 except:
                                     sleep(2)
-                                    db_new.create_new_lot(row[0])
+                                    db_new.create_new_lot(goo[0])
                 firstopen = 0
 
-            text = requests.get(dim.adress + str(new))
+            text = requests.get(dim.adress + str(new) + '?embed=1')
             sleep(0.01)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
-                row = goo[0].split('/')
-                if row[0] != 'false':
+                if goo[0] != 'false':
                     new += 1
-                    if row[14] == '#active':
+                    if goo[10] == '#active':
                         try:
                             auid_raw = db_new.get_new_auid()
                         except:
@@ -317,12 +358,12 @@ def detector():
                         if str(auid_raw) != 'False':
                             for g in auid_raw:
                                 auid.append(g[0])
-                        if int(row[0]) not in auid:
+                        if int(goo[0]) not in auid:
                             try:
-                                db_new.create_new_lot(row[0])
+                                db_new.create_new_lot(goo[0])
                             except:
                                 sleep(2)
-                                db_new.create_new_lot(row[0])
+                                db_new.create_new_lot(goo[0])
                             print(thread_name + dim.adress + str(new) + ' Добавлен в базу активных')
                         else:
                             print(thread_name + dim.adress + str(new) + ' Уже есть в базе активных')
@@ -332,24 +373,29 @@ def detector():
                         if str(auid_raw_old) != 'False':
                             for g in auid_raw_old:
                                 auid_old.append(g[0])
-                        if int(row[0]) not in auid_old:
-                            stamp = timer([row[9], row[10], row[11], row[12], row[13]])
-                            db.create_lot(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], stamp,
-                                          row[14])
+                        if int(goo[0]) not in auid_old:
+                            db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
+                                          goo[6], goo[7], goo[8], goo[9], goo[10])
                         print(thread_name + dim.adress + str(new) + ' Добавил в базу старых')
                 else:
                     print(thread_name + dim.adress + str(new) + ' Форму не нашло')
                     sleep(1)
                     if firstopen == 0:
-                        print(log(0))
+                        draw = '<code>' + start_message.text + '\n' + log(0) + '</code>'
+                        try:
+                            bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
+                                                  message_id=start_message.message_id, parse_mode='HTML')
+                        except:
+                            draw += '\n<b>Старые посты не из таблицы добавлены в бота.\n' \
+                                    'Не смог отредактировать сообщение.</b>'
+                            bot.send_message(idMe, draw, parse_mode='HTML')
                         firstopen -= 1
             else:
                 print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
 
-        except Exception as e:
-            thread_name = 'detector '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'detector'
+            executive(thread_name)
 
 
 def lot_updater():
@@ -372,33 +418,29 @@ def lot_updater():
                 for g in auid_raw:
                     auid.append(g[0])
             for i in auid:
-                text = requests.get(dim.adress + str(i))
+                text = requests.get(dim.adress + str(i) + '?embed=1')
                 sleep(0.01)
                 goo = former(text, int(i), 'new')
-                row = goo[0].split('/')
-                if row[0] != 'false':
-                    if row[14] != '#active':
+                if goo[0] != 'false':
+                    if goo[14] != '#active':
                         try:
-                            db_new.delete_new_lot(row[0])
+                            db_new.delete_new_lot(goo[0])
                         except:
                             sleep(2)
-                            db_new.delete_new_lot(row[0])
+                            db_new.delete_new_lot(goo[0])
                         auid_raw_old = db.get_auid()
                         auid_old = []
                         if str(auid_raw_old) != 'False':
                             for g in auid_raw_old:
                                 auid_old.append(g[0])
-                        if int(row[0]) not in auid_old:
-                            stamp = timer([row[9], row[10], row[11], row[12], row[13]])
-                            db.create_lot(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7],
-                                          row[8], stamp, row[14])
+                        if int(goo[0]) not in auid_old:
+                            db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
+                                          goo[6], goo[7], goo[8], goo[9], goo[10])
             print(thread_name + ' удалил закончившиеся из базы')
             sleep(3)
-
-        except Exception as e:
-            thread_name = 'lot_updater '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'lot_updater'
+            executive(thread_name)
 
 
 def google_updater():
@@ -472,11 +514,9 @@ def google_updater():
                             sleep(2)
                             count -= 1
                 print(thread_name + ' удалил закончившиеся из google')
-
-        except Exception as e:
-            thread_name = 'google_updater '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'google_updater'
+            executive(thread_name)
 
 
 def messages():
@@ -635,10 +675,9 @@ def messages():
                 sleep(1)
                 i = i + 1
             print(thread_name + 'конец')
-        except Exception as e:
-            thread_name = 'messages '
-            bot.send_message(idMe, 'вылет ' + thread_name + ': i = ' + str(i) + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'messages'
+            executive(thread_name)
 
 
 def checker():
@@ -646,9 +685,10 @@ def checker():
         try:
             sleep(10)
             global data1
-            global check
+            global old
             thread_name = 'checker '
             print(thread_name + 'начало')
+            check = copy.copy(old)
             try:
                 google = data1.col_values(1)
             except:
@@ -659,7 +699,7 @@ def checker():
             check -= 1000
             while check < int(google[1]):
                 sleep(2)
-                text = requests.get(dim.adress + str(check))
+                text = requests.get(dim.adress + str(check) + '?embed=1')
                 print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
                 if str(check) not in ignore:
                     goo = former(text, check, 'old')
@@ -673,10 +713,9 @@ def checker():
                     print(thread_name + dim.adress + str(check) + ' В черном списке, пропускаю')
                 check += 1
             print(thread_name + 'конец')
-        except Exception as e:
-            thread_name = 'checker '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'checker'
+            executive(thread_name)
 
 
 def double_checker():
@@ -700,10 +739,9 @@ def double_checker():
                                      + str(google.index(i)) + ' в массиве')
             print(thread_name + 'конец')
             sleep(10800)
-        except Exception as e:
-            thread_name = 'double_checker '
-            bot.send_message(idMe, 'вылет ' + thread_name + '\n' + str(e))
-            sleep(1)
+        except IndexError:
+            thread_name = 'double_checker'
+            executive(thread_name)
 
 
 @bot.message_handler(func=lambda message: message.text)
@@ -738,3 +776,4 @@ if __name__ == '__main__':
     _thread.start_new_thread(checker, ())
     _thread.start_new_thread(double_checker, ())
     telepol()
+
