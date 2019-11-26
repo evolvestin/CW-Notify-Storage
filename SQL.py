@@ -23,9 +23,9 @@ class SQLighter:
         with self.connection:
             self.cursor.execute('INSERT INTO actives (auid) VALUES (?)', (auid,))
 
-    def create_lots(self, sqls):
+    def create_lots(self, sql):
         with self.connection:
-            self.cursor.execute(sqls)
+            self.cursor.execute(sql)
 
     def delete_new_lot(self, auid):
         with self.connection:
