@@ -1,6 +1,6 @@
 cw = 'cw2'
 if cw == 'cw2':
-    token = '659292396:AAEeJKTEU4g2168cADrQx6QmN7IzSrJX_Ok'
+    token = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
     server = 1
     file = 'eustorage'
     json_old = 'eustorage1.json'
