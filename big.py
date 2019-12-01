@@ -345,7 +345,7 @@ def detector():
                 firstopen = 0
 
             text = requests.get(dim.adress + str(new) + '?embed=1')
-            sleep(0.01)
+            sleep(0.3)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
                 if goo[0] != 'false':
@@ -774,7 +774,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(detector, ())
     _thread.start_new_thread(lot_updater, ())
     _thread.start_new_thread(google_updater, ())
-    _thread.start_new_thread(messages, ())
+    # _thread.start_new_thread(messages, ())
     _thread.start_new_thread(checker, ())
     _thread.start_new_thread(double_checker, ())
     telepol()
