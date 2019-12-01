@@ -425,7 +425,7 @@ def lot_updater():
                 sleep(0.01)
                 goo = former(text, int(i), 'new')
                 if goo[0] != 'false':
-                    if goo[14] != '#active':
+                    if goo[10] != '#active':
                         try:
                             db_new.delete_new_lot(goo[0])
                         except:
