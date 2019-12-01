@@ -193,6 +193,11 @@ google.pop(0)
 string = ''
 point = 0
 perk = 3
+for i in google:
+    if google.count(i) > 1:
+        bot.send_message(idMe, 'Элемент\n\n' + str(i) + '\n\nповторяется в базе '
+                         + str(google.count(i)) + ' раз.\nНа данный момент он находится на позиции '
+                         + str(google.index(i)) + ' в массиве')
 # ====================================================================================
 start_message = bot.send_message(idMe, '<code>' + log(stamp1) + '\n' + log(0) + '</code>', parse_mode='HTML')
 
@@ -348,7 +353,7 @@ def detector():
                 firstopen = 0
 
             text = requests.get(dim.adress + str(new) + '?embed=1')
-            sleep(0.3)
+            sleep(0.1)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
                 if goo[0] != 'false':
@@ -527,159 +532,159 @@ def google_updater():
 def messages():
     while True:
         try:
-            global i
-            thread_name = 'messages '
-            print(thread_name + 'начало')
-            db = SQLighter('old.db')
-            creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-            creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
-            client2 = gspread.authorize(creds2)
-            client3 = gspread.authorize(creds3)
-            data2 = client2.open('Info').worksheet('const_uber')
-            data3 = client3.open(dim.file).worksheet('storage')
-            const_pre = data2.col_values(2)
-            sleep(1)
-            data2 = client2.open(dim.file).worksheet('storage')
-            const = []
-            const2 = []
-            for g in const_pre:
-                const.append(g + '/none')
-                qualities_raw = db.get_quality(g)
-                if str(qualities_raw) != 'False':
-                    qualities = []
-                    for f in qualities_raw:
-                        splited = f[0]
-                        splited = splited.split('.')
-                        if splited[0] not in qualities:
-                            qualities.append(splited[0])
-                    for f in qualities:
-                        if f != 'none':
-                            const2.append(g + '/' + f)
-            for g in const2:
-                const.append(g)
-            i = 0
-            while i < len(const):
-                text = ''
-                time_30 = int(datetime.now().timestamp()) - (7*24*60*60)
-                newcol = []
-                newcol_30 = []
-                unsold = []
-                f_average = 0
-                average_30 = 0
-                f_un_average = 0
-                un_average_30 = 0
-                f_min = 1000
-                f_max = 0
-                min_30 = 1000
-                max_30 = 0
-                splited = const[i].split('/')
-                col = db.get_lots(splited[0])
-                if str(col) != 'False':
-                    for z in col:
-                        qua = z[4].split('.')
-                        quality = qua[0]
-                        cost = z[7]
-                        buyer = z[8]
-                        stamp = z[9]
-                        status = z[10]
-                        if status != 'Cancelled' and quality == splited[1]:
-                            if buyer != 'None':
-                                if stamp >= time_30:
-                                    newcol_30.append(cost)
-                                    average_30 += cost
-                                    if min_30 > cost:
-                                        min_30 = cost
-                                    if max_30 < cost:
-                                        max_30 = cost
-                                newcol.append(cost)
-                                f_average += cost
-                                if f_min > cost:
-                                    f_min = cost
-                                if f_max < cost:
-                                    f_max = cost
-                            else:
-                                if stamp >= time_30:
-                                    un_average_30 += 1
-                                unsold.append(cost)
-                                f_un_average += 1
-
-                    if len(newcol) > 0:
-                        last = newcol[len(newcol) - 1]
-                        lastsold = dim.lastsold + str(last)
-                    else:
-                        lastsold = ''
-                        last = 0
-
-                    newcol.sort()
-                    newcol_30.sort()
-
-                    if len(newcol) % 2 == 0 and len(newcol) != 0:
-                        lot1 = int(newcol[len(newcol) // 2])
-                        lot2 = int(newcol[len(newcol) // 2 - 1])
-                        median = round((lot1 + lot2) / 2, 2)
-                    elif len(newcol) == 0:
-                        median = 0
-                    else:
-                        median = int(newcol[len(newcol) // 2])
-
-                    if len(newcol_30) % 2 == 0 and len(newcol_30) != 0:
-                        lot1_30 = int(newcol_30[len(newcol_30) // 2])
-                        lot2_30 = int(newcol_30[len(newcol_30) // 2 - 1])
-                        median_30 = round((lot1_30 + lot2_30) / 2, 2)
-                    elif len(newcol_30) == 0:
-                        median_30 = 0
-                    else:
-                        median_30 = int(newcol_30[len(newcol_30) // 2])
-
-                    if len(newcol) > 0:
-                        f_average = round(f_average / len(newcol), 2)
-                    else:
-                        f_average = 0
-                    if len(newcol_30) > 0:
-                        average_30 = round(average_30 / len(newcol_30), 2)
-                    else:
-                        average_30 = 0
-
-                else:
-                    median = 0
-                    median_30 = 0
-                    lastsold = ''
-                    last = 0
-
-                if f_min == 1000:
-                    f_min = 0
-                if min_30 == 1000:
-                    min_30 = 0
-
-                print(thread_name + 'i = ' + str(i) + ' last = ' + str(last))
-                text = text + dim.soldtimes + str(len(newcol)) + '\n\n' + \
-                    dim.alltime + \
-                    dim.median + str(median) + '\n' + \
-                    dim.average + str(f_average) + '\n' + \
-                    dim.minmax + str(f_min) + '/' + str(f_max) + '\n' + \
-                    dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '\n\n' + \
-                    dim.days + \
-                    dim.median + str(median_30) + '\n' + \
-                    dim.average + str(average_30) + '\n' + \
-                    dim.minmax + str(min_30) + '/' + str(max_30) + '\n' + \
-                    dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
-                    str(lastsold) + '\n\n'
-
-                try:
-                    data2.update_cell(1, i + 1, const[i])
-                    data3.update_cell(2, i + 1, text)
-                except:
-                    creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                    creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
-                    client2 = gspread.authorize(creds2)
-                    client3 = gspread.authorize(creds3)
-                    data2 = client2.open(dim.file).worksheet('storage')
-                    data3 = client3.open(dim.file).worksheet('storage')
-                    data2.update_cell(1, i + 1, const[i])
-                    data3.update_cell(2, i + 1, text)
+            if firstopen == -1:
+                thread_name = 'messages '
+                print(thread_name + 'начало')
+                db = SQLighter('old.db')
+                creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
+                client2 = gspread.authorize(creds2)
+                client3 = gspread.authorize(creds3)
+                data2 = client2.open('Info').worksheet('const_uber')
+                data3 = client3.open(dim.file).worksheet('storage')
+                const_pre = data2.col_values(2)
                 sleep(1)
-                i = i + 1
-            print(thread_name + 'конец')
+                data2 = client2.open(dim.file).worksheet('storage')
+                const = []
+                const2 = []
+                for g in const_pre:
+                    const.append(g + '/none')
+                    qualities_raw = db.get_quality(g)
+                    if str(qualities_raw) != 'False':
+                        qualities = []
+                        for f in qualities_raw:
+                            splited = f[0]
+                            splited = splited.split('.')
+                            if splited[0] not in qualities:
+                                qualities.append(splited[0])
+                        for f in qualities:
+                            if f != 'none':
+                                const2.append(g + '/' + f)
+                for g in const2:
+                    const.append(g)
+                i = 0
+                while i < len(const):
+                    text = ''
+                    time_30 = int(datetime.now().timestamp()) - (7*24*60*60)
+                    newcol = []
+                    newcol_30 = []
+                    unsold = []
+                    f_average = 0
+                    average_30 = 0
+                    f_un_average = 0
+                    un_average_30 = 0
+                    f_min = 1000
+                    f_max = 0
+                    min_30 = 1000
+                    max_30 = 0
+                    splited = const[i].split('/')
+                    col = db.get_lots(splited[0])
+                    if str(col) != 'False':
+                        for z in col:
+                            qua = z[4].split('.')
+                            quality = qua[0]
+                            cost = z[7]
+                            buyer = z[8]
+                            stamp = z[9]
+                            status = z[10]
+                            if status != 'Cancelled' and quality == splited[1]:
+                                if buyer != 'None':
+                                    if stamp >= time_30:
+                                        newcol_30.append(cost)
+                                        average_30 += cost
+                                        if min_30 > cost:
+                                            min_30 = cost
+                                        if max_30 < cost:
+                                            max_30 = cost
+                                    newcol.append(cost)
+                                    f_average += cost
+                                    if f_min > cost:
+                                        f_min = cost
+                                    if f_max < cost:
+                                        f_max = cost
+                                else:
+                                    if stamp >= time_30:
+                                        un_average_30 += 1
+                                    unsold.append(cost)
+                                    f_un_average += 1
+
+                        if len(newcol) > 0:
+                            last = newcol[len(newcol) - 1]
+                            lastsold = dim.lastsold + str(last)
+                        else:
+                            lastsold = ''
+
+                        newcol.sort()
+                        newcol_30.sort()
+
+                        if len(newcol) % 2 == 0 and len(newcol) != 0:
+                            lot1 = int(newcol[len(newcol) // 2])
+                            lot2 = int(newcol[len(newcol) // 2 - 1])
+                            median = round((lot1 + lot2) / 2, 2)
+                        elif len(newcol) == 0:
+                            median = 0
+                        else:
+                            median = int(newcol[len(newcol) // 2])
+
+                        if len(newcol_30) % 2 == 0 and len(newcol_30) != 0:
+                            lot1_30 = int(newcol_30[len(newcol_30) // 2])
+                            lot2_30 = int(newcol_30[len(newcol_30) // 2 - 1])
+                            median_30 = round((lot1_30 + lot2_30) / 2, 2)
+                        elif len(newcol_30) == 0:
+                            median_30 = 0
+                        else:
+                            median_30 = int(newcol_30[len(newcol_30) // 2])
+
+                        if len(newcol) > 0:
+                            f_average = round(f_average / len(newcol), 2)
+                        else:
+                            f_average = 0
+                        if len(newcol_30) > 0:
+                            average_30 = round(average_30 / len(newcol_30), 2)
+                        else:
+                            average_30 = 0
+
+                    else:
+                        median = 0
+                        median_30 = 0
+                        lastsold = ''
+
+                    if f_min == 1000:
+                        f_min = 0
+                    if min_30 == 1000:
+                        min_30 = 0
+
+                    print(thread_name + 'i = ' + str(i))
+                    text = text + dim.soldtimes + str(len(newcol)) + '\n\n' + \
+                        dim.alltime + \
+                        dim.median + str(median) + '\n' + \
+                        dim.average + str(f_average) + '\n' + \
+                        dim.minmax + str(f_min) + '/' + str(f_max) + '\n' + \
+                        dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '\n\n' + \
+                        dim.days + \
+                        dim.median + str(median_30) + '\n' + \
+                        dim.average + str(average_30) + '\n' + \
+                        dim.minmax + str(min_30) + '/' + str(max_30) + '\n' + \
+                        dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
+                        str(lastsold) + '\n\n'
+
+                    try:
+                        data2.update_cell(1, i + 1, const[i])
+                        data3.update_cell(2, i + 1, text)
+                    except:
+                        creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                        creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
+                        client2 = gspread.authorize(creds2)
+                        client3 = gspread.authorize(creds3)
+                        data2 = client2.open(dim.file).worksheet('storage')
+                        data3 = client3.open(dim.file).worksheet('storage')
+                        data2.update_cell(1, i + 1, const[i])
+                        data3.update_cell(2, i + 1, text)
+                    sleep(1)
+                    i = i + 1
+                print(thread_name + 'конец')
+            else:
+                sleep(20)
         except IndexError:
             thread_name = 'messages'
             executive(thread_name)
@@ -723,32 +728,6 @@ def checker():
             executive(thread_name)
 
 
-def double_checker():
-    while True:
-        try:
-            sleep(1800)
-            thread_name = 'double_checker '
-            print(thread_name + 'начало')
-            global data1
-            try:
-                google = data1.col_values(1)
-            except:
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_old, scope)
-                client1 = gspread.authorize(creds1)
-                data1 = client1.open(dim.file).worksheet('old')
-                google = data1.col_values(1)
-            for i in google:
-                if google.count(i) > 1:
-                    bot.send_message(idMe, 'Элемент\n\n' + str(i) + '\n\nповторяется в базе '
-                                     + str(google.count(i)) + ' раз.\nНа данный момент он находится на позиции '
-                                     + str(google.index(i)) + ' в массиве')
-            print(thread_name + 'конец')
-            sleep(10800)
-        except IndexError:
-            thread_name = 'double_checker'
-            executive(thread_name)
-
-
 @bot.message_handler(func=lambda message: message.text)
 def repeat_all_messages(message):
     if message.chat.id != idMe:
@@ -779,6 +758,5 @@ if __name__ == '__main__':
     _thread.start_new_thread(google_updater, ())
     _thread.start_new_thread(messages, ())
     _thread.start_new_thread(checker, ())
-    #_thread.start_new_thread(double_checker, ())
     telepol()
 
