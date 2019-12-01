@@ -193,11 +193,6 @@ google.pop(0)
 string = ''
 point = 0
 perk = 3
-for i in google:
-    if google.count(i) > 1:
-        bot.send_message(idMe, 'Элемент\n\n' + str(i) + '\n\nповторяется в базе '
-                         + str(google.count(i)) + ' раз.\nНа данный момент он находится на позиции '
-                         + str(google.index(i)) + ' в массиве')
 # ====================================================================================
 start_message = bot.send_message(idMe, '<code>' + log(stamp1) + '\n' + log(0) + '</code>', parse_mode='HTML')
 
@@ -227,6 +222,26 @@ if string != '':
     db.create_lots(start_string + string)
     string = ''
 
+double = []
+double_raw = db.get_double()
+if str(double_raw) != 'False':
+    for i in double_raw:
+        auid = str(i[0]) + '/' + dim.lot + ' #' + str(i[1]) + ' :'
+        if auid not in double:
+            double.append(auid)
+for id in double:
+    for lot in google:
+        if id in lot:
+            letter = ''
+            rows = lot.split('/')
+            for i in rows:
+                if rows.index(i) == 0:
+                    letter += i + '/'
+                else:
+                    letter += i + '\n'
+            position = str(google.index(lot) + 3)
+            bot.send_message(idMe, 'Повторяющийся на позиции <b>' + position + '</b> в базе элемент:\n\n'
+                             + '<code>' + letter + '</code>', parse_mode='HTML')
 
 # ====================================================================================
 
