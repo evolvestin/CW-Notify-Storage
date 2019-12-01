@@ -241,7 +241,7 @@ def executive(name):
     for i in error_raw:
         error += str(i)
     bot.send_message(idMe, 'Вылет ' + name + '\n' + error)
-    _thread.exit()
+    sleep(100)
 
 
 def former(text, id, type):
@@ -384,7 +384,7 @@ def detector():
                     print(thread_name + dim.adress + str(new) + ' Форму не нашло')
                     sleep(1)
                     if firstopen == 0:
-                        draw = '<code>' + start_message.text + '\n' + log(0) + '</code>'
+                        draw += '\n<code>' + log(0) + '</code>'
                         try:
                             bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
                                                   message_id=start_message.message_id, parse_mode='HTML')
@@ -422,7 +422,7 @@ def lot_updater():
                     auid.append(g[0])
             for i in auid:
                 text = requests.get(dim.adress + str(i) + '?embed=1')
-                sleep(0.01)
+                sleep(1)
                 goo = former(text, int(i), 'new')
                 if goo[0] != 'false':
                     if goo[10] != '#active':
