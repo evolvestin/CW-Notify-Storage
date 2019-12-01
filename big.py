@@ -284,6 +284,7 @@ def oldest():
                 goo = former(text, old, 'old')
                 if goo[0] == 'active':
                     print(thread_name + dim.adress + str(old) + ' Активен, ничего не делаю')
+                    sleep(3)
                 elif goo[0] == 'false':
                     print(thread_name + dim.adress + str(old) + ' Форму не нашло')
                 else:
@@ -297,7 +298,7 @@ def oldest():
                         data1 = client1.open(dim.file).worksheet('old')
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
-                    sleep(4)
+                    sleep(5)
                     print(thread_name + dim.adress + str(old) + ' Добавил в google старый лот')
             else:
                 print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
@@ -312,8 +313,9 @@ def detector():
     while True:
         try:
             global new
-            global firstopen
+            global draw
             global data5
+            global firstopen
             thread_name = 'detector '
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
@@ -382,7 +384,7 @@ def detector():
                         print(thread_name + dim.adress + str(new) + ' Добавил в базу старых')
                 else:
                     print(thread_name + dim.adress + str(new) + ' Форму не нашло')
-                    sleep(1)
+                    sleep(2)
                     if firstopen == 0:
                         draw += '\n<code>' + log(0) + '</code>'
                         try:
@@ -464,7 +466,7 @@ def google_updater():
                     client5 = gspread.authorize(creds5)
                     data5 = client5.open(dim.file).worksheet('active')
                     google = data5.col_values(1)
-                sleep(2)
+                sleep(5)
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -493,7 +495,7 @@ def google_updater():
                     client5 = gspread.authorize(creds5)
                     data5 = client5.open(dim.file).worksheet('active')
                     google = data5.col_values(1)
-                sleep(2)
+                sleep(5)
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -701,7 +703,7 @@ def checker():
                 google = data1.col_values(1)
             check -= 1000
             while check < int(google[1]):
-                sleep(2)
+                sleep(4)
                 text = requests.get(dim.adress + str(check) + '?embed=1')
                 print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
                 if str(check) not in ignore:
@@ -775,7 +777,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(detector, ())
     _thread.start_new_thread(lot_updater, ())
     _thread.start_new_thread(google_updater, ())
-    # _thread.start_new_thread(messages, ())
+    _thread.start_new_thread(messages, ())
     _thread.start_new_thread(checker, ())
     _thread.start_new_thread(double_checker, ())
     telepol()
