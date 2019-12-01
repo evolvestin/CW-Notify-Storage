@@ -779,6 +779,6 @@ if __name__ == '__main__':
     _thread.start_new_thread(google_updater, ())
     _thread.start_new_thread(messages, ())
     _thread.start_new_thread(checker, ())
-    _thread.start_new_thread(double_checker, ())
+    #_thread.start_new_thread(double_checker, ())
     telepol()
 
