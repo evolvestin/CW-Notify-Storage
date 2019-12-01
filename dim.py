@@ -26,6 +26,7 @@ if cw == 'cw2':
     average = 'Average: '
     minmax = 'Min/Max: '
     unsold = 'Unsold: '
+    lot = 'Lot'
 else:
     token = '468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c'
     server = 2
@@ -53,3 +54,4 @@ else:
     average = 'Средняя цена: '
     minmax = 'Мин/Макс: '
     unsold = 'Не продано: '
+    lot = 'Лот'
