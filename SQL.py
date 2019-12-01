@@ -31,6 +31,15 @@ class SQLighter:
         with self.connection:
             self.cursor.execute('DELETE FROM actives WHERE auid = ?', (auid,))
 
+    def get_double(self):
+        with self.connection:
+            result = self.cursor.execute('SELECT * FROM old WHERE auid IN '
+                                         '(SELECT auid FROM old GROUP BY auid HAVING COUNT(*) > 1)').fetchall()
+            if result:
+                return result
+            else:
+                return False
+
     def get_lots(self, name):
         with self.connection:
             result = self.cursor.execute('SELECT * FROM old WHERE name = ? ORDER BY stamp', (name,)).fetchall()
