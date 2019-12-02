@@ -304,7 +304,7 @@ def oldest():
                 goo = former(text, old, 'old')
                 if goo[0] == 'active':
                     print(thread_name + dim.adress + str(old) + ' Активен, ничего не делаю')
-                    sleep(3)
+                    sleep(7)
                 elif goo[0] == 'false':
                     print(thread_name + dim.adress + str(old) + ' Форму не нашло')
                 else:
@@ -404,7 +404,7 @@ def detector():
                         print(thread_name + dim.adress + str(new) + ' Добавил в базу старых')
                 else:
                     print(thread_name + dim.adress + str(new) + ' Форму не нашло')
-                    sleep(7)
+                    sleep(8)
                     if firstopen == 0:
                         draw += '\n<code>' + log(0) + '</code>'
                         try:
@@ -478,7 +478,7 @@ def google_updater():
             if firstopen == 1:
                 sleep(10)
             if firstopen != 1:
-                sleep(15)
+                sleep(60)
                 print(thread_name + 'начало')
                 try:
                     google = data5.col_values(1)
@@ -698,7 +698,7 @@ def messages():
                             cell_list[1].value = text
                             data4.update_cells(cell_list)
                         sleep(1)
-                        i = i + 1
+                    i = i + 1
                     print(printer)
                 print(thread_name + 'конец')
             else:
