@@ -428,11 +428,11 @@ def lot_updater():
         try:
             global firstopen
             thread_name = 'lot_updater '
+            if firstopen == 1:
+                sleep(10)
             print(thread_name + 'начало')
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
-            if firstopen == 1:
-                sleep(10)
             try:
                 auid_raw = db_new.get_new_auid()
             except:
@@ -558,6 +558,7 @@ def messages():
                 const_pre = data4.col_values(2)
                 sleep(1)
                 data4 = client4.open(dim.file).worksheet('storage')
+                google = data4.col_values(2)
                 const = []
                 const2 = []
                 for g in const_pre:
@@ -656,7 +657,6 @@ def messages():
                             average_30 = round(average_30 / len(newcol_30), 2)
                         else:
                             average_30 = 0
-
                     else:
                         median = 0
                         median_30 = 0
@@ -667,7 +667,6 @@ def messages():
                     if min_30 == 1000:
                         min_30 = 0
 
-                    print(thread_name + 'i = ' + str(i))
                     text = text + '__' + dim.soldtimes + str(len(newcol)) + '__' + \
                            dim.alltime + '_' + \
                            dim.median + str(median) + '_' + \
@@ -681,22 +680,26 @@ def messages():
                            dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
                            str(lastsold) + '__'
 
-                    row = str(i + 1)
-                    try:
-                        cell_list = data4.range('A' + row + ':B' + row)
-                        cell_list[0].value = const[i]
-                        cell_list[1].value = text
-                        data4.update_cells(cell_list)
-                    except:
-                        creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                        client4 = gspread.authorize(creds4)
-                        data4 = client4.open(dim.file).worksheet('storage')
-                        cell_list = data4.range('A' + row + ':B' + row)
-                        cell_list[0].value = const[i]
-                        cell_list[1].value = text
-                        data4.update_cells(cell_list)
-                    sleep(1)
-                    i = i + 1
+                    printer = thread_name + 'i = ' + str(i)
+                    if text != google[i]:
+                        printer += ' новое'
+                        row = str(i + 1)
+                        try:
+                            cell_list = data4.range('A' + row + ':B' + row)
+                            cell_list[0].value = const[i]
+                            cell_list[1].value = text
+                            data4.update_cells(cell_list)
+                        except:
+                            creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                            client4 = gspread.authorize(creds4)
+                            data4 = client4.open(dim.file).worksheet('storage')
+                            cell_list = data4.range('A' + row + ':B' + row)
+                            cell_list[0].value = const[i]
+                            cell_list[1].value = text
+                            data4.update_cells(cell_list)
+                        sleep(1)
+                        i = i + 1
+                    print(printer)
                 print(thread_name + 'конец')
             else:
                 sleep(20)
