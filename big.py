@@ -723,7 +723,7 @@ def checker():
                 google = data1.col_values(1)
             check -= 1000
             while check < int(google[1]):
-                sleep(4)
+                sleep(10)
                 text = requests.get(dim.adress + str(check) + '?embed=1')
                 print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
                 if str(check) not in ignore:
@@ -771,7 +771,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(detector, ())
     _thread.start_new_thread(lot_updater, ())
     _thread.start_new_thread(google_updater, ())
-    # _thread.start_new_thread(messages, ())
-    # _thread.start_new_thread(checker, ())
+    _thread.start_new_thread(messages, ())
+    _thread.start_new_thread(checker, ())
     telepol()
 
