@@ -474,11 +474,12 @@ def google_updater():
             global firstopen
             global data5
             thread_name = 'google_updater '
-            print(thread_name + 'начало')
             db_new = SQLighter('new.db')
             if firstopen == 1:
                 sleep(10)
             if firstopen != 1:
+                sleep(15)
+                print(thread_name + 'начало')
                 try:
                     google = data5.col_values(1)
                 except:
@@ -486,7 +487,7 @@ def google_updater():
                     client5 = gspread.authorize(creds5)
                     data5 = client5.open(dim.file).worksheet('active')
                     google = data5.col_values(1)
-                sleep(5)
+                sleep(1)
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -515,7 +516,7 @@ def google_updater():
                     client5 = gspread.authorize(creds5)
                     data5 = client5.open(dim.file).worksheet('active')
                     google = data5.col_values(1)
-                sleep(5)
+                sleep(1)
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -536,7 +537,7 @@ def google_updater():
                                 client5 = gspread.authorize(creds5)
                                 data5 = client5.open(dim.file).worksheet('active')
                                 data5.delete_row(google.index(i) + count)
-                            sleep(2)
+                            sleep(4)
                             count -= 1
                 print(thread_name + ' удалил закончившиеся из google')
         except IndexError:
