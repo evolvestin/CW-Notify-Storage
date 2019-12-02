@@ -556,9 +556,9 @@ def messages():
                 client4 = gspread.authorize(creds4)
                 data4 = client4.open('Info').worksheet('const_uber')
                 const_pre = data4.col_values(2)
-                sleep(1)
                 data4 = client4.open(dim.file).worksheet('storage')
                 google = data4.col_values(2)
+                sleep(2)
                 const = []
                 const2 = []
                 for g in const_pre:
