@@ -368,7 +368,7 @@ def detector():
                 firstopen = 0
 
             text = requests.get(dim.adress + str(new) + '?embed=1')
-            sleep(0.1)
+            sleep(2)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
                 if goo[0] != 'false':
@@ -444,7 +444,7 @@ def lot_updater():
                     auid.append(g[0])
             for i in auid:
                 text = requests.get(dim.adress + str(i) + '?embed=1')
-                sleep(1)
+                sleep(5)
                 goo = former(text, int(i), 'new')
                 if goo[0] != 'false':
                     if goo[10] != '#active':
@@ -505,7 +505,7 @@ def google_updater():
                             client5 = gspread.authorize(creds5)
                             data5 = client5.open(dim.file).worksheet('active')
                             data5.insert_row([int(i)], 1)
-                        sleep(2)
+                        sleep(4)
                 print(thread_name + ' добавил новые лоты в google')
 
                 try:
@@ -772,6 +772,6 @@ if __name__ == '__main__':
     _thread.start_new_thread(lot_updater, ())
     _thread.start_new_thread(google_updater, ())
     _thread.start_new_thread(messages, ())
-    _thread.start_new_thread(checker, ())
+    # _thread.start_new_thread(checker, ())
     telepol()
 
