@@ -368,7 +368,7 @@ def detector():
                 firstopen = 0
 
             text = requests.get(dim.adress + str(new) + '?embed=1')
-            sleep(2)
+            sleep(0.3)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
                 if goo[0] != 'false':
@@ -404,7 +404,7 @@ def detector():
                         print(thread_name + dim.adress + str(new) + ' Добавил в базу старых')
                 else:
                     print(thread_name + dim.adress + str(new) + ' Форму не нашло')
-                    sleep(2)
+                    sleep(7)
                     if firstopen == 0:
                         draw += '\n<code>' + log(0) + '</code>'
                         try:
