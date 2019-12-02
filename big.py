@@ -551,15 +551,12 @@ def messages():
                 thread_name = 'messages '
                 print(thread_name + 'начало')
                 db = SQLighter('old.db')
-                creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
-                client2 = gspread.authorize(creds2)
-                client3 = gspread.authorize(creds3)
-                data2 = client2.open('Info').worksheet('const_uber')
-                data3 = client3.open(dim.file).worksheet('storage')
-                const_pre = data2.col_values(2)
+                creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                client4 = gspread.authorize(creds4)
+                data4 = client4.open('Info').worksheet('const_uber')
+                const_pre = data4.col_values(2)
                 sleep(1)
-                data2 = client2.open(dim.file).worksheet('storage')
+                data4 = client4.open(dim.file).worksheet('storage')
                 const = []
                 const2 = []
                 for g in const_pre:
@@ -580,7 +577,7 @@ def messages():
                 i = 0
                 while i < len(const):
                     text = ''
-                    time_30 = int(datetime.now().timestamp()) - (7*24*60*60)
+                    time_30 = int(datetime.now().timestamp()) - (7 * 24 * 60 * 60)
                     newcol = []
                     newcol_30 = []
                     unsold = []
@@ -625,7 +622,7 @@ def messages():
 
                         if len(newcol) > 0:
                             last = newcol[len(newcol) - 1]
-                            lastsold = dim.lastsold + str(last)
+                            lastsold = '_' + dim.lastsold + str(last)
                         else:
                             lastsold = ''
 
@@ -670,31 +667,33 @@ def messages():
                         min_30 = 0
 
                     print(thread_name + 'i = ' + str(i))
-                    text = text + dim.soldtimes + str(len(newcol)) + '\n\n' + \
-                        dim.alltime + \
-                        dim.median + str(median) + '\n' + \
-                        dim.average + str(f_average) + '\n' + \
-                        dim.minmax + str(f_min) + '/' + str(f_max) + '\n' + \
-                        dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '\n\n' + \
-                        dim.days + \
-                        dim.median + str(median_30) + '\n' + \
-                        dim.average + str(average_30) + '\n' + \
-                        dim.minmax + str(min_30) + '/' + str(max_30) + '\n' + \
-                        dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
-                        str(lastsold) + '\n\n'
+                    text = text + '__' + dim.soldtimes + str(len(newcol)) + '__' + \
+                           dim.alltime + '_' + \
+                           dim.median + str(median) + '_' + \
+                           dim.average + str(f_average) + '_' + \
+                           dim.minmax + str(f_min) + '/' + str(f_max) + '_' + \
+                           dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '__' + \
+                           dim.days + '_' + \
+                           dim.median + str(median_30) + '_' + \
+                           dim.average + str(average_30) + '_' + \
+                           dim.minmax + str(min_30) + '/' + str(max_30) + '_' + \
+                           dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
+                           str(lastsold) + '__'
 
+                    row = str(i + 1)
                     try:
-                        data2.update_cell(1, i + 1, const[i])
-                        data3.update_cell(2, i + 1, text)
+                        cell_list = data4.range('A' + row + ':B' + row)
+                        cell_list[0].value = const[i]
+                        cell_list[1].value = text
+                        data4.update_cells(cell_list)
                     except:
-                        creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                        creds3 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage_supp, scope)
-                        client2 = gspread.authorize(creds2)
-                        client3 = gspread.authorize(creds3)
-                        data2 = client2.open(dim.file).worksheet('storage')
-                        data3 = client3.open(dim.file).worksheet('storage')
-                        data2.update_cell(1, i + 1, const[i])
-                        data3.update_cell(2, i + 1, text)
+                        creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                        client4 = gspread.authorize(creds4)
+                        data4 = client4.open(dim.file).worksheet('storage')
+                        cell_list = data4.range('A' + row + ':B' + row)
+                        cell_list[0].value = const[i]
+                        cell_list[1].value = text
+                        data4.update_cells(cell_list)
                     sleep(1)
                     i = i + 1
                 print(thread_name + 'конец')
