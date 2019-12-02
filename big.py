@@ -269,7 +269,7 @@ def former(text, id, type):
     soup = BeautifulSoup(text.text, 'html.parser')
     is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
     if str(is_post_not_exist) == str(None):
-        stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
+        stamp_now = int(datetime.now().timestamp()) - 24 * 60 * 60
         string = str(soup.find('div', class_='tgme_widget_message_text js-message_text'))
         string = re.sub(' (dir|class|style)=\\"\w+[^\\"]+\\"', '', string)
         string = re.sub('(<b>|</b>|<i>|</i>|<div>|</div>)', '', string)
@@ -318,7 +318,7 @@ def oldest():
                         data1 = client1.open(dim.file).worksheet('old')
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
-                    sleep(5)
+                    sleep(6)
                     print(thread_name + dim.adress + str(old) + ' Добавил в google старый лот')
             else:
                 print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
@@ -462,7 +462,7 @@ def lot_updater():
                             db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
                                           goo[6], goo[7], goo[8], goo[9], goo[10])
             print(thread_name + ' удалил закончившиеся из базы')
-            sleep(3)
+            sleep(5)
         except IndexError:
             thread_name = 'lot_updater'
             executive(thread_name)
@@ -771,7 +771,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(detector, ())
     _thread.start_new_thread(lot_updater, ())
     _thread.start_new_thread(google_updater, ())
-    _thread.start_new_thread(messages, ())
-    _thread.start_new_thread(checker, ())
+    # _thread.start_new_thread(messages, ())
+    # _thread.start_new_thread(checker, ())
     telepol()
 
