@@ -198,7 +198,7 @@ def updater(pos, stat, printext, const):
 
 
 def tele_request():
-    text = requests.get(dim.active)
+    text = requests.get('https://t.me/lot_updater/' + str(dim.actual) + '?embed=1')
     soup = BeautifulSoup(text.text, 'html.parser')
     is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
     if str(is_post_not_exist) == 'None':
@@ -216,7 +216,7 @@ def tele_request():
 
 def editor(text, printext, printext2):
     try:
-        bot.edit_message_text('<code>' + text + '</code>', -1001376067490, 5, parse_mode='HTML')
+        bot.edit_message_text('<code>' + text + '</code>', -1001376067490, dim.actual, parse_mode='HTML')
         print(printext + printext2)
     except:
         print(printext + printext2 + ' (пост не изменился)')
