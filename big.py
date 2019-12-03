@@ -710,11 +710,10 @@ def messages():
                         dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
                         str(lastsold) + '__'
 
-                    if len(google) < i:
+                    if len(google) > i:
                         if text != google[i]:
-                            updater(i, text, 'залупа', const)
+                            updater(i, text, thread_name, const)
                     else:
-                        print('длина превышена')
                         updater(i, text, thread_name, const)
                     i += 1
                 print(thread_name + 'конец')
