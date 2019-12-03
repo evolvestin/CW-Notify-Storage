@@ -389,12 +389,9 @@ def detector():
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
             if firstopen == 1:
-                creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                client5 = gspread.authorize(creds5)
-                data5 = client5.open(dim.file).worksheet('active')
-                google = data5.col_values(1)
-                for i in google:
-                    if i != '':
+                a_lots = tele_request()
+                for i in a_lots:
+                    if i != '' and i != 'drop':
                         text = requests.get(dim.adress + i + '?embed=1')
                         sleep(0.01)
                         try:
