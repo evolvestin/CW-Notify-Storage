@@ -8,6 +8,7 @@ if cw == 'cw2':
     json_storage = 'eustorage4.json'
     json_active = 'eustorage5.json'
     adress = 'https://t.me/ChatWarsAuction/'
+    active = 'https://t.me/lot_updater/7?embed=1'
     # ---------------------- forms ----------------------
     title = 'Lot #(\d+) : (.*)'
     quali = 'Quality: (.*)'
@@ -36,6 +37,7 @@ else:
     json_storage = 'bigdata4.json'
     json_active = 'bigdata5.json'
     adress = 'https://t.me/chatwars3/'
+    active = 'https://t.me/lot_updater/8?embed=1'
     # ---------------------- forms ----------------------
     title = 'Лот #(\d+) : (.*)'
     quali = 'Качество: (.*)'
