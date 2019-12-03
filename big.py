@@ -177,6 +177,55 @@ def log(stamp):
     return message
 
 
+def updater(pos, stat, printext):
+    global data4
+    row = str(pos + 1)
+    try:
+        cell_list = data4.range('A' + row + ':B' + row)
+        cell_list[0].value = const[pos]
+        cell_list[1].value = stat
+        data4.update_cells(cell_list)
+    except:
+        creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+        client4 = gspread.authorize(creds4)
+        data4 = client4.open(dim.file).worksheet('storage')
+        cell_list = data4.range('A' + row + ':B' + row)
+        cell_list[0].value = const[pos]
+        cell_list[1].value = stat
+        data4.update_cells(cell_list)
+    print(printext + 'i = ' + str(pos) + ' новое')
+
+
+def tele_request():
+    text = requests.get('https://t.me/lot_updater/5?embed=1')
+    soup = BeautifulSoup(text.text, 'html.parser')
+    is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
+    if str(is_post_not_exist) == 'None':
+        grow = str(soup.find('div', class_='tgme_widget_message_text js-message_text'))
+        grow = re.sub(' (dir|class|style)=\\"\w+[^\\"]+\\"', '', grow)
+        grow = re.sub('(<b>|</b>|<i>|</i>|<div>|</div>|<br/>|<code>|</code>)', '', grow)
+        if grow == 'None':
+            massive = ['']
+        else:
+            massive = grow.split('/')
+    else:
+        massive = ['drop']
+    return massive
+
+
+def editor(text, printext, printext2):
+    try:
+        bot.edit_message_text('<code>' + text + '</code>', -1001376067490, 5, parse_mode='HTML')
+        print(printext + printext2)
+    except:
+        print(printext + printext2 + ' (пост не изменился)')
+
+
+array = tele_request()
+if array[0] == 'drop':
+    _thread.exit()
+
+
 start_string = 'INSERT INTO old (auid, lotid, enchanted, name, quality, ' \
                'condition, seller, cost, buyer, stamp, status) VALUES '
 stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
@@ -468,26 +517,22 @@ def lot_updater():
             executive(thread_name)
 
 
-def google_updater():
+def telegram():
     while True:
         try:
             global firstopen
-            global data5
-            thread_name = 'google_updater '
+            thread_name = 'telegram '
             db_new = SQLighter('new.db')
             if firstopen == 1:
                 sleep(10)
             if firstopen != 1:
-                sleep(60)
+                sleep(20)
                 print(thread_name + 'начало')
-                try:
-                    google = data5.col_values(1)
-                except:
-                    creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                    client5 = gspread.authorize(creds5)
-                    data5 = client5.open(dim.file).worksheet('active')
-                    google = data5.col_values(1)
-                sleep(1)
+                array = tele_request()
+                row = '/'
+                for i in array:
+                    if i != '':
+                        row += i + '/'
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -498,25 +543,18 @@ def google_updater():
                     for g in auid_raw:
                         auid.append(g[0])
                 for i in auid:
-                    if str(i) not in google:
-                        try:
-                            data5.insert_row([int(i)], 1)
-                        except:
-                            creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                            client5 = gspread.authorize(creds5)
-                            data5 = client5.open(dim.file).worksheet('active')
-                            data5.insert_row([int(i)], 1)
-                        sleep(4)
-                print(thread_name + ' добавил новые лоты в google')
+                    if str(i) not in array:
+                        if len(row) < 4085:
+                            row += str(i) + '/'
+                if row == '/':
+                    row = 'None'
 
-                try:
-                    google = data5.col_values(1)
-                except:
-                    creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                    client5 = gspread.authorize(creds5)
-                    data5 = client5.open(dim.file).worksheet('active')
-                    google = data5.col_values(1)
-                sleep(1)
+                editor(row, thread_name, 'добавил новые лоты в telegram')
+
+                if row != 'None':
+                    array = row.split('/')
+                else:
+                    array = []
                 try:
                     auid_raw = db_new.get_new_auid()
                 except:
@@ -526,22 +564,14 @@ def google_updater():
                 if str(auid_raw) != 'False':
                     for g in auid_raw:
                         auid.append(g[0])
-                count = 1
-                for i in google:
+                for i in array:
                     if i != '':
                         if int(i) not in auid:
-                            try:
-                                data5.delete_row(google.index(i) + count)
-                            except:
-                                creds5 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_active, scope)
-                                client5 = gspread.authorize(creds5)
-                                data5 = client5.open(dim.file).worksheet('active')
-                                data5.delete_row(google.index(i) + count)
-                            sleep(4)
-                            count -= 1
-                print(thread_name + ' удалил закончившиеся из google')
+                            row = re.sub('/' + str(i) + '/', '/', row)
+
+                editor(row, thread_name, 'удалил закончившиеся из google')
         except IndexError:
-            thread_name = 'google_updater'
+            thread_name = 'telegram'
             executive(thread_name)
 
 
@@ -549,6 +579,7 @@ def messages():
     while True:
         try:
             if firstopen == -1:
+                global data4
                 thread_name = 'messages '
                 print(thread_name + 'начало')
                 db = SQLighter('old.db')
@@ -668,81 +699,30 @@ def messages():
                         min_30 = 0
 
                     text = text + '__' + dim.soldtimes + str(len(newcol)) + '__' + \
-                           dim.alltime + '_' + \
-                           dim.median + str(median) + '_' + \
-                           dim.average + str(f_average) + '_' + \
-                           dim.minmax + str(f_min) + '/' + str(f_max) + '_' + \
-                           dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '__' + \
-                           dim.days + '_' + \
-                           dim.median + str(median_30) + '_' + \
-                           dim.average + str(average_30) + '_' + \
-                           dim.minmax + str(min_30) + '/' + str(max_30) + '_' + \
-                           dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
-                           str(lastsold) + '__'
+                        dim.alltime + '_' + \
+                        dim.median + str(median) + '_' + \
+                        dim.average + str(f_average) + '_' + \
+                        dim.minmax + str(f_min) + '/' + str(f_max) + '_' + \
+                        dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '__' + \
+                        dim.days + '_' + \
+                        dim.median + str(median_30) + '_' + \
+                        dim.average + str(average_30) + '_' + \
+                        dim.minmax + str(min_30) + '/' + str(max_30) + '_' + \
+                        dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
+                        str(lastsold) + '__'
 
-                    printer = thread_name + 'i = ' + str(i)
-                    if text != google[i]:
-                        printer += ' новое'
-                        row = str(i + 1)
-                        try:
-                            cell_list = data4.range('A' + row + ':B' + row)
-                            cell_list[0].value = const[i]
-                            cell_list[1].value = text
-                            data4.update_cells(cell_list)
-                        except:
-                            creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                            client4 = gspread.authorize(creds4)
-                            data4 = client4.open(dim.file).worksheet('storage')
-                            cell_list = data4.range('A' + row + ':B' + row)
-                            cell_list[0].value = const[i]
-                            cell_list[1].value = text
-                            data4.update_cells(cell_list)
+                    if len(google) <= i:
+                        if text != google[i]:
+                            updater(i, text, thread_name)
+                    else:
+                        updater(i, text, thread_name)
                         sleep(1)
                     i = i + 1
-                    print(printer)
                 print(thread_name + 'конец')
             else:
                 sleep(20)
         except IndexError:
             thread_name = 'messages'
-            executive(thread_name)
-
-
-def checker():
-    while True:
-        try:
-            sleep(10)
-            global data1
-            global old
-            thread_name = 'checker '
-            print(thread_name + 'начало')
-            check = copy.copy(old)
-            try:
-                google = data1.col_values(1)
-            except:
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_old, scope)
-                client1 = gspread.authorize(creds1)
-                data1 = client1.open(dim.file).worksheet('old')
-                google = data1.col_values(1)
-            check -= 1000
-            while check < int(google[1]):
-                sleep(10)
-                text = requests.get(dim.adress + str(check) + '?embed=1')
-                print(thread_name + 'проверяю наличие ' + dim.adress + str(check))
-                if str(check) not in ignore:
-                    goo = former(text, check, 'old')
-                    if goo[0] == 'active':
-                        bot.send_message(idMe, '🧐\n' + dim.adress + str(check) +
-                                         '\n\n' + str(goo[0]) + '\n\nЧто-то странненькое')
-                    elif goo[0] not in google:
-                        bot.send_message(idMe, '🤔\n' + dim.adress + str(check) +
-                                         '\n\n' + str(goo[0]) + '\n\nЭтого лота нет в базе, проверь')
-                else:
-                    print(thread_name + dim.adress + str(check) + ' В черном списке, пропускаю')
-                check += 1
-            print(thread_name + 'конец')
-        except IndexError:
-            thread_name = 'checker'
             executive(thread_name)
 
 
@@ -773,8 +753,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(oldest, ())
     _thread.start_new_thread(detector, ())
     _thread.start_new_thread(lot_updater, ())
-    _thread.start_new_thread(google_updater, ())
+    _thread.start_new_thread(telegram, ())
     _thread.start_new_thread(messages, ())
-    # _thread.start_new_thread(checker, ())
     telepol()
 
