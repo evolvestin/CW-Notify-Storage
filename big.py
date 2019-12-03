@@ -177,7 +177,7 @@ def log(stamp):
     return message
 
 
-def updater(pos, stat, printext):
+def updater(pos, stat, printext, const):
     global data4
     row = str(pos + 1)
     try:
@@ -565,7 +565,8 @@ def telegram():
                     if i != '':
                         if int(i) not in auid:
                             row = re.sub('/' + str(i) + '/', '/', row)
-
+                if row == '/':
+                    row = 'None'
                 editor(row, thread_name, 'удалил закончившиеся из google')
         except IndexError:
             thread_name = 'telegram'
@@ -710,9 +711,9 @@ def messages():
 
                     if len(google) <= i:
                         if text != google[i]:
-                            updater(i, text, thread_name)
+                            updater(i, text, thread_name, const)
                     else:
-                        updater(i, text, thread_name)
+                        updater(i, text, thread_name, const)
                         sleep(1)
                     i = i + 1
                 print(thread_name + 'конец')
