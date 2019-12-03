@@ -193,6 +193,7 @@ def updater(pos, stat, printext, const):
         cell_list[0].value = const[pos]
         cell_list[1].value = stat
         data4.update_cells(cell_list)
+    sleep(1)
     print(printext + 'i = ' + str(pos) + ' новое')
 
 
@@ -711,11 +712,11 @@ def messages():
 
                     if len(google) <= i:
                         if text != google[i]:
-                            updater(i, text, thread_name, const)
+                            updater(i, text, 'залупа', const)
                     else:
+                        print('длина превышена')
                         updater(i, text, thread_name, const)
-                        sleep(1)
-                    i = i + 1
+                    i += 1
                 print(thread_name + 'конец')
             else:
                 sleep(20)
