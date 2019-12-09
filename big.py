@@ -586,7 +586,7 @@ def messages():
                 db = SQLighter('old.db')
                 creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
                 client2 = gspread.authorize(creds2)
-                data2 = client2.open('storage').worksheet('const_uber')
+                data2 = client2.open('storage').worksheet('const_items')
                 const_pre = data2.col_values(2)
                 data2 = client2.open(dim.file).worksheet('storage')
                 google = data2.col_values(3)
