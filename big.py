@@ -181,7 +181,7 @@ def updater(pos, cost, stat, printext, const):
     global data4
     row = str(pos + 1)
     try:
-        cell_list = data4.range('A' + row + ':B' + row)
+        cell_list = data4.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
@@ -190,7 +190,7 @@ def updater(pos, cost, stat, printext, const):
         creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
         client4 = gspread.authorize(creds4)
         data4 = client4.open(dim.file).worksheet('storage')
-        cell_list = data4.range('A' + row + ':B' + row)
+        cell_list = data4.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
