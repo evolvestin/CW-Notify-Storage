@@ -1,4 +1,4 @@
-cw = 'cw3'
+cw = 'cw2'
 if cw == 'cw2':
     token = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
     server = 1
