@@ -178,23 +178,23 @@ def log(stamp):
 
 
 def updater(pos, cost, stat, printext, const):
-    global data4
+    global data2
     row = str(pos + 1)
     try:
-        cell_list = data4.range('A' + row + ':C' + row)
+        cell_list = data2.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
-        data4.update_cells(cell_list)
+        data2.update_cells(cell_list)
     except:
-        creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-        client4 = gspread.authorize(creds4)
-        data4 = client4.open(dim.file).worksheet('storage')
-        cell_list = data4.range('A' + row + ':C' + row)
+        creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+        client2 = gspread.authorize(creds2)
+        data2 = client2.open(dim.file).worksheet('storage')
+        cell_list = data2.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
-        data4.update_cells(cell_list)
+        data2.update_cells(cell_list)
     sleep(1)
     print(printext + 'i = ' + str(pos) + ' новое')
 
@@ -580,16 +580,16 @@ def messages():
     while True:
         try:
             if firstopen == -1:
-                global data4
+                global data2
                 thread_name = 'messages '
                 print(thread_name + 'начало')
                 db = SQLighter('old.db')
-                creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
-                client4 = gspread.authorize(creds4)
-                data4 = client4.open('Info').worksheet('const_uber')
-                const_pre = data4.col_values(2)
-                data4 = client4.open(dim.file).worksheet('storage')
-                google = data4.col_values(3)
+                creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                client2 = gspread.authorize(creds2)
+                data2 = client2.open('storage').worksheet('const_uber')
+                const_pre = data2.col_values(2)
+                data2 = client2.open(dim.file).worksheet('storage')
+                google = data2.col_values(3)
                 sleep(2)
                 const = []
                 const2 = []
@@ -667,6 +667,8 @@ def messages():
                             lot1 = int(newcol[len(newcol) // 2])
                             lot2 = int(newcol[len(newcol) // 2 - 1])
                             median = round((lot1 + lot2) / 2, 2)
+                            if (median % int(median)) == 0:
+                                median = int(median)
                         elif len(newcol) == 0:
                             median = 0
                         else:
@@ -676,6 +678,8 @@ def messages():
                             lot1_30 = int(newcol_30[len(newcol_30) // 2])
                             lot2_30 = int(newcol_30[len(newcol_30) // 2 - 1])
                             median_30 = round((lot1_30 + lot2_30) / 2, 2)
+                            if (median_30 % int(median_30)) == 0:
+                                median_30 = int(median_30)
                         elif len(newcol_30) == 0:
                             median_30 = 0
                         else:
@@ -714,11 +718,8 @@ def messages():
                         dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
                         str(lastsold) + '__'
 
-                    if len(google) > i:
-                        if text != google[i]:
-                            updater(i, t_costs, text, thread_name, const)
-                    else:
-                        updater(i, t_costs, text, thread_name, const)
+
+                    updater(i, t_costs, text, thread_name, const)
                     i += 1
                 print(thread_name + 'конец')
             else:
