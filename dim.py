@@ -4,9 +4,7 @@ if cw == 'cw2':
     server = 1
     file = 'eustorage'
     json_old = 'eustorage1.json'
-    json_storage_supp = 'eustorage3.json'
-    json_storage = 'eustorage4.json'
-    json_active = 'eustorage5.json'
+    json_storage = 'eustorage2.json'
     adress = 'https://t.me/ChatWarsAuction/'
     actual = 7
     # ---------------------- forms ----------------------
@@ -33,9 +31,7 @@ else:
     server = 2
     file = 'storage'
     json_old = 'bigdata1.json'
-    json_storage_supp = 'bigdata3.json'
-    json_storage = 'bigdata4.json'
-    json_active = 'bigdata5.json'
+    json_storage = 'bigdata2.json'
     adress = 'https://t.me/chatwars3/'
     actual = 8
     # ---------------------- forms ----------------------
