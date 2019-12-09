@@ -177,13 +177,14 @@ def log(stamp):
     return message
 
 
-def updater(pos, stat, printext, const):
+def updater(pos, cost, stat, printext, const):
     global data4
     row = str(pos + 1)
     try:
         cell_list = data4.range('A' + row + ':B' + row)
         cell_list[0].value = const[pos]
-        cell_list[1].value = stat
+        cell_list[1].value = cost
+        cell_list[2].value = stat
         data4.update_cells(cell_list)
     except:
         creds4 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
@@ -191,7 +192,8 @@ def updater(pos, stat, printext, const):
         data4 = client4.open(dim.file).worksheet('storage')
         cell_list = data4.range('A' + row + ':B' + row)
         cell_list[0].value = const[pos]
-        cell_list[1].value = stat
+        cell_list[1].value = cost
+        cell_list[2].value = stat
         data4.update_cells(cell_list)
     sleep(1)
     print(printext + 'i = ' + str(pos) + ' новое')
@@ -697,7 +699,9 @@ def messages():
                     if min_30 == 1000:
                         min_30 = 0
 
-                    text = text + '__' + dim.soldtimes + str(len(newcol)) + '__' + \
+                    t_costs = str(median) + '/' + str(median_30)
+
+                    text += '__' + dim.soldtimes + str(len(newcol)) + '__' + \
                         dim.alltime + '_' + \
                         dim.median + str(median) + '_' + \
                         dim.average + str(f_average) + '_' + \
@@ -712,9 +716,9 @@ def messages():
 
                     if len(google) > i:
                         if text != google[i]:
-                            updater(i, text, thread_name, const)
+                            updater(i, t_costs, text, thread_name, const)
                     else:
-                        updater(i, text, thread_name, const)
+                        updater(i, t_costs, text, thread_name, const)
                     i += 1
                 print(thread_name + 'конец')
             else:
