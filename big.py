@@ -718,8 +718,11 @@ def messages():
                         dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
                         str(lastsold) + '__'
 
-
-                    updater(i, t_costs, text, thread_name, const)
+                    if len(google) > i:
+                        if text != google[i]:
+                            updater(i, t_costs, text, thread_name, const)
+                    else:
+                        updater(i, t_costs, text, thread_name, const)
                     i += 1
                 print(thread_name + 'конец')
             else:
