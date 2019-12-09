@@ -589,7 +589,7 @@ def messages():
                 data4 = client4.open('Info').worksheet('const_uber')
                 const_pre = data4.col_values(2)
                 data4 = client4.open(dim.file).worksheet('storage')
-                google = data4.col_values(2)
+                google = data4.col_values(3)
                 sleep(2)
                 const = []
                 const2 = []
