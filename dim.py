@@ -6,7 +6,8 @@ if cw == 'cw2':
     json_old = 'eustorage1.json'
     json_storage = 'eustorage2.json'
     adress = 'https://t.me/ChatWarsAuction/'
-    actual = 7
+    zone = 'EU-'
+    actual = 9
     # ---------------------- forms ----------------------
     title = 'Lot #(\d+) : (.*)'
     quali = 'Quality: (.*)'
@@ -33,7 +34,8 @@ else:
     json_old = 'bigdata1.json'
     json_storage = 'bigdata2.json'
     adress = 'https://t.me/chatwars3/'
-    actual = 8
+    zone = 'RU-'
+    actual = 10
     # ---------------------- forms ----------------------
     title = 'Лот #(\d+) : (.*)'
     quali = 'Качество: (.*)'
