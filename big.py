@@ -306,7 +306,7 @@ except:
     bot.send_message(idMe, draw, parse_mode='HTML')
 
 
-def executive(name):
+def executive(name, new):
     exc_type, exc_value, exc_traceback = sys.exc_info()
     error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
     error = ''
@@ -314,6 +314,10 @@ def executive(name):
         error += str(i)
     bot.send_message(idMe, 'Вылет ' + name + '\n' + error)
     sleep(100)
+    _thread.start_new_thread(new, ())
+    bot.send_message(idMe, 'Запущен <b>' + name + '</b>', parse_mode='HTML')
+    sleep(30)
+    _thread.exit()
 
 
 def former(text, id, type):
@@ -378,7 +382,7 @@ def oldest():
 
         except IndexError:
             thread_name = 'oldest'
-            executive(thread_name)
+            executive(thread_name, oldest)
 
 
 def detector():
@@ -469,7 +473,7 @@ def detector():
 
         except IndexError:
             thread_name = 'detector'
-            executive(thread_name)
+            executive(thread_name, detector)
 
 
 def lot_updater():
@@ -514,7 +518,7 @@ def lot_updater():
             sleep(5)
         except IndexError:
             thread_name = 'lot_updater'
-            executive(thread_name)
+            executive(thread_name, lot_updater)
 
 
 def telegram():
@@ -573,7 +577,7 @@ def telegram():
                 editor(row, thread_name, 'удалил закончившиеся из google')
         except IndexError:
             thread_name = 'telegram'
-            executive(thread_name)
+            executive(thread_name, telegram)
 
 
 def messages():
@@ -729,7 +733,7 @@ def messages():
                 sleep(20)
         except IndexError:
             thread_name = 'messages'
-            executive(thread_name)
+            executive(thread_name, messages)
 
 
 @bot.message_handler(func=lambda message: message.text)
