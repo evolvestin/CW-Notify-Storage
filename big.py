@@ -189,7 +189,7 @@ def updater(pos, cost, stat, printext, const):
     except:
         creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
         client2 = gspread.authorize(creds2)
-        data2 = client2.open(dim.file).worksheet('storage')
+        data2 = client2.open('Notify').worksheet(dim.zone + 'storage')
         cell_list = data2.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
@@ -586,9 +586,9 @@ def messages():
                 db = SQLighter('old.db')
                 creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
                 client2 = gspread.authorize(creds2)
-                data2 = client2.open('storage').worksheet('const_items')
+                data2 = client2.open('Notify').worksheet('const_items')
                 const_pre = data2.col_values(2)
-                data2 = client2.open(dim.file).worksheet('storage')
+                data2 = client2.open('Notify').worksheet(dim.zone + 'storage')
                 google = data2.col_values(3)
                 sleep(2)
                 const = []
