@@ -446,13 +446,12 @@ def detector():
                                     db_new.create_new_lot(goo[0])
                 firstopen = 0
 
+            sleep(0.3)
             printext = variable['destination'][server] + str(new)
             text = requests.get(printext + '?embed=1')
-            sleep(0.3)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
                 if goo[0] != 'false':
-                    new += 1
                     if goo[10] == '#active':
                         try:
                             auid_raw = db_new.get_new_auid()
@@ -482,6 +481,7 @@ def detector():
                             db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
                                           goo[6], goo[7], goo[8], goo[9], goo[10])
                         printext += ' Добавил в базу старых'
+                    new += 1
                 else:
                     printext += ' Форму не нашло'
                     sleep(8)
@@ -617,22 +617,20 @@ def messages():
                 google = data2.col_values(3)
                 sleep(2)
                 const = []
-                const2 = []
                 for g in const_pre:
                     const.append(g + '/none')
                     qualities_raw = db.get_quality(g)
                     if str(qualities_raw) != 'False':
                         qualities = []
                         for f in qualities_raw:
-                            splited = f[0]
-                            splited = splited.split('.')
+                            splited = f[0].split('.')
                             if splited[0] not in qualities:
                                 qualities.append(splited[0])
+                        if len(qualities) > 1:
+                            const.append(g + '/Common')
                         for f in qualities:
                             if f != 'none':
-                                const2.append(g + '/' + f)
-                for g in const2:
-                    const.append(g)
+                                const.append(g + '/' + f)
                 i = 0
                 while i < len(const):
                     text = ''
@@ -658,26 +656,27 @@ def messages():
                             buyer = z[8]
                             stamp = z[9]
                             status = z[10]
-                            if status != 'Cancelled' and quality == splited[1]:
-                                if buyer != 'None':
-                                    if stamp >= time_30:
-                                        newcol_30.append(cost)
-                                        average_30 += cost
-                                        if min_30 > cost:
-                                            min_30 = cost
-                                        if max_30 < cost:
-                                            max_30 = cost
-                                    newcol.append(cost)
-                                    f_average += cost
-                                    if f_min > cost:
-                                        f_min = cost
-                                    if f_max < cost:
-                                        f_max = cost
-                                else:
-                                    if stamp >= time_30:
-                                        un_average_30 += 1
-                                    unsold.append(cost)
-                                    f_un_average += 1
+                            if status != 'Cancelled':
+                                if quality == splited[1] or splited[1] == 'none':
+                                    if buyer != 'None':
+                                        if stamp >= time_30:
+                                            newcol_30.append(cost)
+                                            average_30 += cost
+                                            if min_30 > cost:
+                                                min_30 = cost
+                                            if max_30 < cost:
+                                                max_30 = cost
+                                        newcol.append(cost)
+                                        f_average += cost
+                                        if f_min > cost:
+                                            f_min = cost
+                                        if f_max < cost:
+                                            f_max = cost
+                                    else:
+                                        if stamp >= time_30:
+                                            un_average_30 += 1
+                                        unsold.append(cost)
+                                        f_un_average += 1
 
                         if len(newcol) > 0:
                             last = newcol[len(newcol) - 1]
