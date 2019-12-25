@@ -9,8 +9,8 @@ res['TOKEN']['cw2'] = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
 res['TOKEN']['cw3'] = '468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c'
 
 res['factor'] = defaultdict(dict)
-res['factor']['cw2'] = '1'
-res['factor']['cw3'] = '2'
+res['factor']['cw2'] = 1
+res['factor']['cw3'] = 2
 
 res['file'] = defaultdict(dict)
 res['file']['cw2'] = 'eustorage'
