@@ -613,7 +613,7 @@ def messages():
                 client2 = gspread.authorize(creds2)
                 data2 = client2.open('Notify').worksheet('const_items')
                 const_pre = data2.col_values(2)
-                data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage2')
+                data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
                 google = data2.col_values(3)
                 sleep(2)
                 const = []
