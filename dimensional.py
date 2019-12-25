@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-server = 'cw3'  # os.environ['server']
+server = os.environ['server']
 res = defaultdict(dict)
 idMe = 396978030
 
