@@ -9,7 +9,7 @@ import gspread
 import requests
 import datetime
 import traceback
-import dimesional
+import dimensional
 from time import sleep
 from SQL import SQLighter
 from bs4 import BeautifulSoup
@@ -17,8 +17,8 @@ from datetime import datetime
 from collections import defaultdict
 from oauth2client.service_account import ServiceAccountCredentials
 stamp1 = int(datetime.now().timestamp())
-server = dimesional.server
-variable = dimesional.res
+server = dimensional.server
+variable = dimensional.res
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
 client1 = gspread.authorize(creds1)
