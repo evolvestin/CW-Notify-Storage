@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import re
-import dim
 import sys
 import time
 import copy
@@ -10,23 +9,31 @@ import gspread
 import requests
 import datetime
 import traceback
+import dimesional
 from time import sleep
-from telebot import types
 from SQL import SQLighter
 from bs4 import BeautifulSoup
 from datetime import datetime
+from collections import defaultdict
 from oauth2client.service_account import ServiceAccountCredentials
-
-
 stamp1 = int(datetime.now().timestamp())
+server = dimesional.server
+variable = dimesional.res
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-creds1 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_old, scope)
+creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
 client1 = gspread.authorize(creds1)
-data1 = client1.open(dim.file).worksheet('old')
-
-bot = telebot.TeleBot(dim.token)
+data1 = client1.open(variable['file'][server]).worksheet('old')
+bot = telebot.TeleBot(variable['TOKEN'][server])
 idMe = 396978030
 # ====================================================================================
+
+
+def bold(txt):
+    return '<b>' + txt + '</b>'
+
+
+def code(txt):
+    return '<code>' + txt + '</code>'
 
 
 def timer(search):
@@ -36,7 +43,7 @@ def timer(search):
     s_hour = int(search.group(4))
     s_minute = int(search.group(5))
     stamp = int(datetime.now().timestamp())
-    sec = ((stamp + (dim.server * 60 * 60) - 1530309600) * 3)
+    sec = ((stamp + (variable['factor'][server] * 60 * 60) - 1530309600) * 3)
     if s_month == 'Wintar':
         month = 1
     elif s_month == 'Hornung':
@@ -115,7 +122,7 @@ def form_mash(lot):
     stamp = 0
     name = 'none'
     cost = 'none'
-    buyer = 'none'
+    b_name = 'none'
     status = 'none'
     seller = 'none'
     quality = 'none'
@@ -125,14 +132,14 @@ def form_mash(lot):
     stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
     splited = lot.split('/')
     for g in splited:
-        title = re.search(dim.title, g)
-        quali = re.search(dim.quali, g)
-        condi = re.search(dim.condi, g)
-        price = re.search(dim.price, g)
-        sell = re.search(dim.seller, g)
-        whobuy = re.search(dim.buys, g)
-        ptime = re.search(dim.stamp, g)
-        stat = re.search(dim.status, g)
+        title = re.search(variable['title'][server], g)
+        quali = re.search(variable['quali'][server], g)
+        condi = re.search(variable['condi'][server], g)
+        sell = re.search(variable['seller'][server], g)
+        price = re.search(variable['price'][server], g)
+        buyer = re.search(variable['buyer'][server], g)
+        ptime = re.search(variable['stamp'][server], g)
+        stat = re.search(variable['status'][server], g)
         if title:
             lotid = title.group(1)
             name = re.sub(' \+\d+[⚔🛡💧]', '', title.group(2))
@@ -149,8 +156,8 @@ def form_mash(lot):
             seller = sell.group(1)
         if price:
             cost = int(price.group(1))
-        if whobuy:
-            buyer = whobuy.group(1)
+        if buyer:
+            b_name = buyer.group(1)
         if ptime:
             stamp = timer(ptime)
         if stat:
@@ -160,10 +167,10 @@ def form_mash(lot):
             if status == '#active':
                 if stamp < stamp_now:
                     status = 'Finished'
-    return [splited[0], lotid, enchanted, name, quality, condition, seller, cost, buyer, stamp, status]
+    return [splited[0], lotid, enchanted, name, quality, condition, seller, cost, b_name, stamp, status]
 
 
-def log(stamp):
+def logtime(stamp):
     if stamp == 0:
         stamp = int(datetime.now().timestamp())
     day = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%d')
@@ -177,7 +184,7 @@ def log(stamp):
     return message
 
 
-def updater(pos, cost, stat, printext, const):
+def updater(pos, cost, stat, const):
     global data2
     row = str(pos + 1)
     try:
@@ -187,20 +194,20 @@ def updater(pos, cost, stat, printext, const):
         cell_list[2].value = stat
         data2.update_cells(cell_list)
     except:
-        creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+        creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
         client2 = gspread.authorize(creds2)
-        data2 = client2.open('Notify').worksheet(dim.zone + 'storage')
+        data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
         cell_list = data2.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
         data2.update_cells(cell_list)
     sleep(1)
-    print(printext + 'i = ' + str(pos) + ' новое')
+    printer('i = ' + str(pos) + ' новое')
 
 
 def tele_request():
-    text = requests.get('https://t.me/lot_updater/' + str(dim.actual) + '?embed=1')
+    text = requests.get('https://t.me/lot_updater/' + str(variable['lots_post_id'][server]) + '?embed=1')
     soup = BeautifulSoup(text.text, 'html.parser')
     is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
     if str(is_post_not_exist) == 'None':
@@ -216,12 +223,21 @@ def tele_request():
     return massive
 
 
-def editor(text, printext, printext2):
+def editor(text, printext):
     try:
-        bot.edit_message_text('<code>' + text + '</code>', -1001376067490, dim.actual, parse_mode='HTML')
-        print(printext + printext2)
+        bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
     except:
-        print(printext + printext2 + ' (пост не изменился)')
+        printext += ' (пост не изменился)'
+    printer(printext)
+
+
+def printer(printer_text):
+    thread_name = str(thread_array[_thread.get_ident()]['name'])
+    logfile = open('log.txt', 'a')
+    log_print_text = thread_name + ' ' + printer_text
+    logfile.write('\n' + re.sub('<.*?>', '', logtime(0)) + log_print_text)
+    logfile.close()
+    print(log_print_text)
 
 
 array = tele_request()
@@ -246,7 +262,10 @@ string = ''
 point = 0
 perk = 3
 # ====================================================================================
-start_message = bot.send_message(idMe, '<code>' + log(stamp1) + '\n' + log(0) + '</code>', parse_mode='HTML')
+start_message = bot.send_message(idMe, code(logtime(stamp1) + '\n' + logtime(0)), parse_mode='HTML')
+logfile_start = open('log.txt', 'w')
+logfile_start.write('Начало записи лога ' + re.sub('<.*?>', '', logtime(0)))
+logfile_start.close()
 
 
 for i in google:
@@ -264,8 +283,8 @@ for i in google:
             string = ''
             point = 0
     else:
-        bot.send_message(idMe, 'В базе ' + dim.file + ' нежелательный элемент за номером ' + str(perk) +
-                         ' сотворил злую шутку, исправь')
+        bot.send_message(idMe, 'В базе ' + variable['file'][server] + ' нежелательный элемент за номером ' +
+                         str(perk) + ' сотворил злую шутку, исправь')
         continue
 if string != '':
     string = string.rstrip()
@@ -278,7 +297,7 @@ double = []
 double_raw = db.get_double()
 if str(double_raw) != 'False':
     for i in double_raw:
-        auid = str(i[0]) + '/' + dim.lot + ' #' + str(i[1]) + ' :'
+        auid = str(i[0]) + '/' + variable['lot'][server] + str(i[1]) + ' :'
         if auid not in double:
             double.append(auid)
 for id in double:
@@ -292,21 +311,27 @@ for id in double:
                 else:
                     letter += i + '\n'
             position = str(google.index(lot) + 3)
-            bot.send_message(idMe, 'Повторяющийся на позиции <b>' + position + '</b> в базе элемент:\n\n'
-                             + '<code>' + letter + '</code>', parse_mode='HTML')
+            bot.send_message(idMe, 'Повторяющийся на позиции ' + bold(position) + ' в базе элемент:\n\n' +
+                             code(letter), parse_mode='HTML')
 
 # ====================================================================================
 
-draw = '<code>' + start_message.text + '\n' + log(0) + '</code>'
+draw = code(start_message.text + '\n' + logtime(0))
 try:
     bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
                           message_id=start_message.message_id, parse_mode='HTML')
 except:
-    draw += '\n<b>Старые посты из таблицы добавлены в бота.\nНе смог отредактировать сообщение.</b>'
+    draw += bold('\nСтарые посты из таблицы добавлены в бота.\nНе смог отредактировать сообщение.')
     bot.send_message(idMe, draw, parse_mode='HTML')
 
 
-def executive(name, new):
+def executive(new):
+    global thread_array
+    search = re.search('<function (\S+)', str(new))
+    if search:
+        name = search.group(1)
+    else:
+        name = ''
     exc_type, exc_value, exc_traceback = sys.exc_info()
     error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
     error = ''
@@ -314,8 +339,11 @@ def executive(name, new):
         error += str(i)
     bot.send_message(idMe, 'Вылет ' + name + '\n' + error)
     sleep(100)
-    _thread.start_new_thread(new, ())
-    bot.send_message(idMe, 'Запущен <b>' + name + '</b>', parse_mode='HTML')
+    thread_id = _thread.start_new_thread(new, ())
+    thread_array[thread_id] = defaultdict(dict)
+    thread_array[thread_id]['name'] = name
+    thread_array[thread_id]['function'] = new
+    bot.send_message(idMe, 'Запущен ' + bold(name), parse_mode='HTML')
     sleep(30)
     _thread.exit()
 
@@ -353,36 +381,35 @@ def oldest():
         try:
             global data1
             global old
-            thread_name = 'oldest '
             sleep(1)
-            text = requests.get(dim.adress + str(old) + '?embed=1')
+            printext = variable['destination'][server] + str(old)
+            text = requests.get(printext + '?embed=1')
             if str(old) not in ignore:
                 goo = former(text, old, 'old')
                 if goo[0] == 'active':
-                    print(thread_name + dim.adress + str(old) + ' Активен, ничего не делаю')
+                    printext += ' Активен, ничего не делаю'
                     sleep(7)
                 elif goo[0] == 'false':
-                    print(thread_name + dim.adress + str(old) + ' Форму не нашло')
+                    printext += ' Форму не нашло'
                 else:
                     old = old + 1
                     try:
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
                     except:
-                        creds1 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_old, scope)
+                        creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
                         client1 = gspread.authorize(creds1)
-                        data1 = client1.open(dim.file).worksheet('old')
+                        data1 = client1.open(variable['file'][server]).worksheet('old')
                         data1.insert_row(goo, 3)
                         data1.update_cell(2, 1, old)
                     sleep(6)
-                    print(thread_name + dim.adress + str(old) + ' Добавил в google старый лот')
+                    printext += ' Добавил в google старый лот'
             else:
-                print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
+                printext += ' В черном списке, пропускаю'
                 old = old + 1
-
+            printer(printext)
         except IndexError:
-            thread_name = 'oldest'
-            executive(thread_name, oldest)
+            executive(oldest)
 
 
 def detector():
@@ -392,14 +419,13 @@ def detector():
             global draw
             global data5
             global firstopen
-            thread_name = 'detector '
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
             if firstopen == 1:
                 a_lots = tele_request()
                 for i in a_lots:
                     if i != '' and i != 'drop':
-                        text = requests.get(dim.adress + i + '?embed=1')
+                        text = requests.get(variable['destination'][server] + i + '?embed=1')
                         sleep(0.01)
                         try:
                             auid_raw = db_new.get_new_auid()
@@ -420,7 +446,8 @@ def detector():
                                     db_new.create_new_lot(goo[0])
                 firstopen = 0
 
-            text = requests.get(dim.adress + str(new) + '?embed=1')
+            printext = variable['destination'][server] + str(new)
+            text = requests.get(printext + '?embed=1')
             sleep(0.3)
             if str(new) not in ignore:
                 goo = former(text, new, 'new')
@@ -442,9 +469,9 @@ def detector():
                             except:
                                 sleep(2)
                                 db_new.create_new_lot(goo[0])
-                            print(thread_name + dim.adress + str(new) + ' Добавлен в базу активных')
+                            printext += ' Добавлен в базу активных'
                         else:
-                            print(thread_name + dim.adress + str(new) + ' Уже есть в базе активных')
+                            printext += ' Уже есть в базе активных'
                     else:
                         auid_raw_old = db.get_auid()
                         auid_old = []
@@ -454,36 +481,34 @@ def detector():
                         if int(goo[0]) not in auid_old:
                             db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
                                           goo[6], goo[7], goo[8], goo[9], goo[10])
-                        print(thread_name + dim.adress + str(new) + ' Добавил в базу старых')
+                        printext += ' Добавил в базу старых'
                 else:
-                    print(thread_name + dim.adress + str(new) + ' Форму не нашло')
+                    printext += ' Форму не нашло'
                     sleep(8)
                     if firstopen == 0:
-                        draw += '\n<code>' + log(0) + '</code>'
+                        draw += '\n' + code(logtime(0))
                         try:
                             bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
                                                   message_id=start_message.message_id, parse_mode='HTML')
                         except:
-                            draw += '\n<b>Старые посты не из таблицы добавлены в бота.\n' \
-                                    'Не смог отредактировать сообщение.</b>'
+                            draw += bold('\nСтарые посты не из таблицы добавлены в бота.\n'
+                                         'Не смог отредактировать сообщение.')
                             bot.send_message(idMe, draw, parse_mode='HTML')
                         firstopen -= 1
             else:
-                print(thread_name + dim.adress + str(old) + ' В черном списке, пропускаю')
-
+                printext += ' В черном списке, пропускаю'
+            printer(printext)
         except IndexError:
-            thread_name = 'detector'
-            executive(thread_name, detector)
+            executive(detector)
 
 
 def lot_updater():
     while True:
         try:
             global firstopen
-            thread_name = 'lot_updater '
             if firstopen == 1:
                 sleep(10)
-            print(thread_name + 'начало')
+            printer('начало')
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
             try:
@@ -496,7 +521,7 @@ def lot_updater():
                 for g in auid_raw:
                     auid.append(g[0])
             for i in auid:
-                text = requests.get(dim.adress + str(i) + '?embed=1')
+                text = requests.get(variable['destination'][server] + str(i) + '?embed=1')
                 sleep(5)
                 goo = former(text, int(i), 'new')
                 if goo[0] != 'false':
@@ -514,24 +539,22 @@ def lot_updater():
                         if int(goo[0]) not in auid_old:
                             db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
                                           goo[6], goo[7], goo[8], goo[9], goo[10])
-            print(thread_name + ' удалил закончившиеся из базы')
+            printer('удалил закончившиеся из базы')
             sleep(5)
         except IndexError:
-            thread_name = 'lot_updater'
-            executive(thread_name, lot_updater)
+            executive(lot_updater)
 
 
 def telegram():
     while True:
         try:
             global firstopen
-            thread_name = 'telegram '
             db_new = SQLighter('new.db')
             if firstopen == 1:
                 sleep(10)
             if firstopen != 1:
                 sleep(20)
-                print(thread_name + 'начало')
+                printer('начало')
                 array = tele_request()
                 row = '/'
                 for i in array:
@@ -553,7 +576,7 @@ def telegram():
                 if row == '/':
                     row = 'None'
 
-                editor(row, thread_name, 'добавил новые лоты в telegram')
+                editor(row, 'добавил новые лоты в telegram')
 
                 if row != 'None':
                     array = row.split('/')
@@ -574,10 +597,9 @@ def telegram():
                             row = re.sub('/' + str(i) + '/', '/', row)
                 if row == '/':
                     row = 'None'
-                editor(row, thread_name, 'удалил закончившиеся из google')
+                editor(row, 'удалил закончившиеся из google')
         except IndexError:
-            thread_name = 'telegram'
-            executive(thread_name, telegram)
+            executive(telegram)
 
 
 def messages():
@@ -585,14 +607,13 @@ def messages():
         try:
             if firstopen == -1:
                 global data2
-                thread_name = 'messages '
-                print(thread_name + 'начало')
+                printer('начало')
                 db = SQLighter('old.db')
-                creds2 = ServiceAccountCredentials.from_json_keyfile_name(dim.json_storage, scope)
+                creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
                 client2 = gspread.authorize(creds2)
                 data2 = client2.open('Notify').worksheet('const_items')
                 const_pre = data2.col_values(2)
-                data2 = client2.open('Notify').worksheet(dim.zone + 'storage')
+                data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage2')
                 google = data2.col_values(3)
                 sleep(2)
                 const = []
@@ -660,7 +681,7 @@ def messages():
 
                         if len(newcol) > 0:
                             last = newcol[len(newcol) - 1]
-                            lastsold = '_' + dim.lastsold + str(last)
+                            lastsold = '_{8} ' + str(last)
                         else:
                             lastsold = ''
 
@@ -709,31 +730,30 @@ def messages():
 
                     t_costs = str(median) + '/' + str(median_30)
 
-                    text += '__' + dim.soldtimes + str(len(newcol)) + '__' + \
-                        dim.alltime + '_' + \
-                        dim.median + str(median) + '_' + \
-                        dim.average + str(f_average) + '_' + \
-                        dim.minmax + str(f_min) + '/' + str(f_max) + '_' + \
-                        dim.unsold + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '__' + \
-                        dim.days + '_' + \
-                        dim.median + str(median_30) + '_' + \
-                        dim.average + str(average_30) + '_' + \
-                        dim.minmax + str(min_30) + '/' + str(max_30) + '_' + \
-                        dim.unsold + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
+                    text += '__' + bold('{1} ') + str(len(newcol)) + '__' + \
+                        bold('{2}') + '_' + \
+                        '{4} ' + str(median) + '_' + \
+                        '{5} ' + str(f_average) + '_' + \
+                        '{6} ' + str(f_min) + '/' + str(f_max) + '_' + \
+                        '{7} ' + str(f_un_average) + '/' + str(len(newcol) + f_un_average) + '__' + \
+                        bold('{3}') + '_' + \
+                        '{4} ' + str(median_30) + '_' + \
+                        '{5} ' + str(average_30) + '_' + \
+                        '{6} ' + str(min_30) + '/' + str(max_30) + '_' + \
+                        '{7} ' + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
                         str(lastsold) + '__'
 
                     if len(google) > i:
                         if text != google[i]:
-                            updater(i, t_costs, text, thread_name, const)
+                            updater(i, t_costs, text, const)
                     else:
-                        updater(i, t_costs, text, thread_name, const)
+                        updater(i, t_costs, text, const)
                     i += 1
-                print(thread_name + 'конец')
+                printer('конец')
             else:
                 sleep(20)
         except IndexError:
-            thread_name = 'messages'
-            executive(thread_name, messages)
+            executive(messages)
 
 
 @bot.message_handler(func=lambda message: message.text)
@@ -741,11 +761,18 @@ def repeat_all_messages(message):
     if message.chat.id != idMe:
         bot.send_message(message.chat.id, 'К тебе этот бот не имеет отношения, уйди пожалуйста')
     else:
-        if message.text == '/base':
-            doc_new = open('new.db', 'rb')
-            doc_old = open('old.db', 'rb')
-            bot.send_document(idMe, doc_new)
-            bot.send_document(idMe, doc_old)
+        if message.text.startswith('/base'):
+            modified = re.sub('/base_', '', message.text)
+            if modified.startswith('n'):
+                doc = open('new.db', 'rb')
+                bot.send_document(idMe, doc)
+            elif modified.startswith('o'):
+                doc = open('old.db', 'rb')
+                bot.send_document(idMe, doc)
+            else:
+                doc = open('log.txt', 'rt')
+                bot.send_document(idMe, doc)
+            doc.close()
         else:
             bot.send_message(message.chat.id, 'Я работаю')
 
@@ -760,10 +787,13 @@ def telepol():
 
 
 if __name__ == '__main__':
-    _thread.start_new_thread(oldest, ())
-    _thread.start_new_thread(detector, ())
-    _thread.start_new_thread(lot_updater, ())
-    _thread.start_new_thread(telegram, ())
-    _thread.start_new_thread(messages, ())
+    gain = [oldest, detector, lot_updater, telegram, messages]
+    thread_array = defaultdict(dict)
+    for i in gain:
+        thread_id = _thread.start_new_thread(i, ())
+        thread_start_name = re.findall('<.+?\s(.+?)\s.*>', str(i))
+        thread_array[thread_id] = defaultdict(dict)
+        thread_array[thread_id]['name'] = thread_start_name[0]
+        thread_array[thread_id]['function'] = i
     telepol()
 
