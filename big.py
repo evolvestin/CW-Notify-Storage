@@ -657,7 +657,8 @@ def messages():
                             stamp = z[9]
                             status = z[10]
                             if status != 'Cancelled':
-                                if quality == splited[1] or splited[1] == 'none':
+                                if quality == splited[1] or splited[1] == 'none' or \
+                                        (splited[1] == 'Common' and quality == 'none'):
                                     if buyer != 'None':
                                         if stamp >= time_30:
                                             newcol_30.append(cost)
