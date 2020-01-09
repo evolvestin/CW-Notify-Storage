@@ -297,6 +297,7 @@ double = []
 double_raw = db.get_double()
 if str(double_raw) != 'False':
     for i in double_raw:
+        print(i)
         auid = str(i[0]) + '/' + variable['lot'][server] + str(i[1]) + ' :'
         if auid not in double:
             double.append(auid)
