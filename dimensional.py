@@ -37,8 +37,8 @@ res['lots_post_id']['cw2'] = 9
 res['lots_post_id']['cw3'] = 10
 
 res['lot'] = defaultdict(dict)
-res['lot']['en'] = 'Lot #'
-res['lot']['ru'] = 'Лот #'
+res['lot']['cw2'] = 'Lot #'
+res['lot']['cw3'] = 'Лот #'
 
 # ---------------------- forms ----------------------
 res['title'] = defaultdict(dict)
