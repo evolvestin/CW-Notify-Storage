@@ -1,187 +1,234 @@
 # -*- coding: utf-8 -*-
 import re
-import sys
-import time
 import copy
 import _thread
-import telebot
 import gspread
 import requests
 import datetime
-import traceback
 import dimensional
 from time import sleep
 from SQL import SQLighter
 from bs4 import BeautifulSoup
 from datetime import datetime
-from collections import defaultdict
 from oauth2client.service_account import ServiceAccountCredentials
+
+from additional.objects import bold
+from additional.objects import code
+from additional.objects import start_main_bot
+from additional.objects import start_message
+from additional.objects import log_time
+from additional.objects import printer
+from additional.objects import query
+from additional.objects import italic
+from additional.objects import properties_json
+from additional.objects import stamper
+from additional.objects import send_dev_message
+from additional.objects import edit_dev_message
+from additional.objects import thread_exec as executive
+from game_time import timer
+
 stamp1 = int(datetime.now().timestamp())
 server = dimensional.server
 variable = dimensional.res
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
-client1 = gspread.authorize(creds1)
-data1 = client1.open(variable['file'][server]).worksheet('old')
-bot = telebot.TeleBot(variable['TOKEN'][server])
+start_sql_request = 'INSERT INTO old (au_id, lot_id, enchant, item_name, quality, ' \
+                    'condition, modifiers, seller, cost, buyer, stamp, status) VALUES '
+properties_title_list = ['lot_id', 'enchant', 'item_name', 'quality', 'condition',
+                         'modifiers', 'seller', 'cost', 'buyer', 'stamp', 'status', 'raw']
+lot_updater_channel = 'https://t.me/lot_updater/'
 idMe = 396978030
+old_values = []
+first_open = 1
+limit = 50000
+old = 0
 # ====================================================================================
 
 
-def bold(txt):
-    return '<b>' + txt + '</b>'
-
-
-def code(txt):
-    return '<code>' + txt + '</code>'
-
-
-def timer(search):
-    s_day = int(search.group(1))
-    s_month = str(search.group(2))
-    s_year = int(search.group(3)) - 60
-    s_hour = int(search.group(4))
-    s_minute = int(search.group(5))
-    stamp = int(datetime.now().timestamp())
-    sec = ((stamp + (variable['factor'][server] * 60 * 60) - 1530309600) * 3)
-    if s_month == 'Wintar':
-        month = 1
-    elif s_month == 'Hornung':
-        month = 2
-    elif s_month == 'Lenzin':
-        month = 3
-    elif s_month == 'Ōstar':
-        month = 4
-    elif s_month == 'Winni':
-        month = 5
-    elif s_month == 'Brāh':
-        month = 6
-    elif s_month == 'Hewi':
-        month = 7
-    elif s_month == 'Aran':
-        month = 8
-    elif s_month == 'Witu':
-        month = 9
-    elif s_month == 'Wīndume':
-        month = 10
-    elif s_month == 'Herbist':
-        month = 11
-    elif s_month == 'Hailag':
-        month = 12
-    else:
-        month = 0
-
-    if month != 0:
-        day31 = 31 * 24 * 60 * 60
-        day30 = 30 * 24 * 60 * 60
-        day28 = 28 * 24 * 60 * 60
-        seconds = 0 - (24 * 60 * 60)
-        if s_year == 4:
-            day28 = day28 + 24 * 60 * 60
-        elif s_year > 4:
-            seconds = seconds + 24 * 60 * 60
-        seconds = seconds + day30 + day31 + 31536000 * (s_year - 1)  # Wīndume
-        if month == 1:
-            seconds = seconds
-        elif month == 2:
-            seconds = seconds + day31
-        elif month == 3:
-            seconds = seconds + day31 + day28
-        elif month == 4:
-            seconds = seconds + day31 + day28 + day31
-        elif month == 5:
-            seconds = seconds + day31 + day28 + day31 + day30
-        elif month == 6:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31
-        elif month == 7:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30
-        elif month == 8:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31
-        elif month == 9:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31
-        elif month == 10:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30
-        elif month == 11:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31
-            if s_year == 0:
-                seconds = 0 - (24 * 60 * 60)
-        elif month == 12:
-            seconds = seconds + day31 + day28 + day31 + day30 + day31 + day30 + day31 + day31 + day30 + day31 + day30
-            if s_year == 0:
-                seconds = day30 - (24 * 60 * 60)
-
-        seconds = seconds + s_day * 24 * 60 * 60
-        seconds = seconds + s_hour * 60 * 60
-        seconds = seconds + s_minute * 60
-        stack = int(stamp + (seconds - sec) / 3)
-        return stack
-
-
 def form_mash(lot):
-    lotid = 0
-    stamp = 0
-    name = 'none'
-    cost = 'none'
-    b_name = 'none'
-    status = 'none'
-    seller = 'none'
-    quality = 'none'
-    enchanted = 'none'
-    condition = 'none'
-    lot = re.sub('\'', '&#39;', lot)
     stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
-    splited = lot.split('/')
-    for g in splited:
-        title = re.search(variable['title'][server], g)
-        quali = re.search(variable['quali'][server], g)
-        condi = re.search(variable['condi'][server], g)
-        sell = re.search(variable['seller'][server], g)
-        price = re.search(variable['price'][server], g)
-        buyer = re.search(variable['buyer'][server], g)
-        ptime = re.search(variable['stamp'][server], g)
-        stat = re.search(variable['status'][server], g)
-        if title:
-            lotid = title.group(1)
-            name = re.sub(' \+\d+[⚔🛡💧]', '', title.group(2))
-            ench = re.search('(⚡)\+(\d+) ', name)
-            enchanted = 'none'
-            if ench:
-                name = re.sub('⚡\+\d+ ', '', name)
-                enchanted = ench.group(2)
-        if quali:
-            quality = quali.group(1)
-        if condi:
-            condition = re.sub(' ⏰.*', '', condi.group(1))
-        if sell:
-            seller = sell.group(1)
-        if price:
-            cost = int(price.group(1))
-        if buyer:
-            b_name = buyer.group(1)
-        if ptime:
-            stamp = timer(ptime)
-        if stat:
-            status = stat.group(1)
-            if status == 'Failed':
-                status = 'Cancelled'
-            if status == '#active':
-                if stamp < stamp_now:
-                    status = 'Finished'
-    return [splited[0], lotid, enchanted, name, quality, condition, seller, cost, b_name, stamp, status]
+    lot = re.sub('\'', '&#39;', lot)
+    lot_properties = {'au_id': 0}
+    lot_split = lot.split('/')
+    search_au_id = re.search('(\d+)', lot_split[0])
+    if search_au_id:
+        lot_properties['au_id'] = int(search_au_id.group(1))
+    for i in properties_title_list:
+        if i == 'lot_id' or i == 'stamp':
+            lot_properties[i] = 0
+        else:
+            lot_properties[i] = 'None'
+    for g in lot_split:
+        for i in variable['form'][server]:
+            search = re.search(variable['form'][server].get(i), g)
+            if search:
+                if i == 'title':
+                    item_name = re.sub(' \+\d+[⚔🛡]', '', search.group(2))
+                    enchant_search = re.search('⚡\+(\d+) ', item_name)
+                    lot_properties['lot_id'] = int(search.group(1))
+                    item_name = re.sub(' \+\d+💧', '', item_name)
+                    enchant = 'None'
+                    if enchant_search:
+                        item_name = re.sub('⚡\+\d+ ', '', item_name)
+                        enchant = enchant_search.group(1)
+                    lot_properties['item_name'] = item_name
+                    lot_properties['enchant'] = enchant
+                elif i == 'condition':
+                    lot_properties[i] = re.sub(' ⏰.*', '', search.group(1))
+                elif i == 'modifiers':
+                    lot_properties[i] = ''
+                elif i == 'cost':
+                    lot_properties[i] = int(search.group(1))
+                elif i == 'stamp':
+                    lot_properties[i] = timer(search)
+                elif i == 'status':
+                    status = search.group(1)
+                    if status == 'Failed':
+                        status = 'Cancelled'
+                    if status == '#active':
+                        if lot_properties['stamp'] < stamp_now:
+                            status = 'Finished'
+                    lot_properties[i] = status
+                elif i == 'raw':
+                    lot_properties[i] = lot
+                else:
+                    lot_properties[i] = search.group(1)
+        if lot_properties['modifiers'] != 'None' and g.startswith(' '):
+            lot_properties['modifiers'] += '  ' + g.strip() + '\n'
+    if lot_properties['modifiers'] != 'None' and lot_properties['modifiers'].endswith('\n'):
+        lot_properties['modifiers'] = lot_properties['modifiers'][:-1]
+    return lot_properties
 
 
-def logtime(stamp):
-    if stamp == 0:
-        stamp = int(datetime.now().timestamp())
-    day = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%d')
-    month = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%m')
-    year = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%Y')
-    hours = datetime.utcfromtimestamp(int(stamp + 3 * 60 * 60)).strftime('%H')
-    minutes = datetime.utcfromtimestamp(int(stamp)).strftime('%M')
-    seconds = datetime.utcfromtimestamp(int(stamp)).strftime('%S')
-    message = str(day) + '.' + str(month) + '.' + str(year) + ' ' + str(hours) + ':' \
-        + str(minutes) + ':' + str(seconds)
-    return message
+def database_filler():
+    global old
+    global old_values
+    global creds1
+    global client1
+    global worksheet
+    db = SQLighter('old.db')
+    creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+    client1 = gspread.authorize(creds1)
+    spreadsheet_list = client1.list_spreadsheet_files()
+    for s in spreadsheet_list:
+        document_name = s['name']
+        if document_name == variable['document'][server] or document_name == 'temp-' + variable['document'][server]:
+            document = client1.open(document_name)
+            for w in document.worksheets():
+                worksheet = document.worksheet(w.title)
+                values = worksheet.col_values(1)
+                sql_request_line = ''
+                position = 0
+                point = 0
+                if w.title == 'old':
+                    old_values = values
+                for g in values:
+                    position += 1
+                    lot_object = form_mash(g)
+                    au_id = lot_object.get('au_id')
+                    if au_id > old:
+                        old = au_id
+                    if au_id != 0:
+                        sql_request_line += "('{}', '{}', '{}', '{}', '{}', '{}', " \
+                                            "'{}', '{}', '{}', '{}', '{}', '{}'), ".format(*lot_object.values())
+                        point += 1
+                        if point == 1000:
+                            sql_request_line = sql_request_line.rstrip()
+                            sql_request_line = sql_request_line[:-1] + ';'
+                            db.create_lots(start_sql_request + sql_request_line)
+                            sql_request_line = ''
+                            point = 0
+                    else:
+                        error = document_name + '/' + w.title + '/' + str(position) + ' пуст или неисправен'
+                        send_dev_message(variable['document'][server], error)
+                if sql_request_line != '':
+                    sql_request_line = sql_request_line.rstrip()
+                    sql_request_line = sql_request_line[:-1] + ';'
+                    db.create_lots(start_sql_request + sql_request_line)
+    double = []
+    double_raw = db.get_double()
+    if double_raw:
+        for i in double_raw:
+            lot_header = str(i[0]) + '/' + variable['lot'][server] + str(i[1])
+            if lot_header not in double:
+                double.append(lot_header)
+    for lot_header in double:
+        send_dev_message(variable['document'][server], 'Повторяющийся в базе элемент: ' + bold(lot_header))
+    worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
+    old_values = worksheet.col_values(1)
+
+
+start_search = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
+if start_search:
+    s_message = start_message(variable['document'][server], stamp1)
+    database_filler()
+    s_message = edit_dev_message(s_message, '\n' + log_time(tag=code))
+else:
+    additional_text = '\nНет подключения к ' + lot_updater_channel + bold('Бот выключен')
+    s_message = start_message(variable['file'][server], stamp1, additional_text)
+    _thread.exit()
+bot = start_main_bot('non-async', variable['TOKEN'][server])
+new = copy.copy(old + 1)
+old += 1
+# ====================================================================================
+
+
+def editor(text, print_text):
+    try:
+        bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
+    except IndexError and Exception:
+        print_text += ' (пост не изменился)'
+    printer(print_text)
+
+
+def google(action, option=None):
+    global creds1
+    global client1
+    global worksheet
+    global old_values
+    if action == 'old_insert':
+        try:
+            worksheet.update_cell(len(old_values) + 1, 1, option)
+        except IndexError and Exception as error:
+            search_exceed = re.search('exceeds grid limits', str(error))
+            if search_exceed:
+                sleep(60)
+                worksheet_number = 0
+                storage_name = variable['document'][server]
+                dev = send_dev_message('temp-' + storage_name, 'Устраняем таблицу', tag=italic, good=True)
+                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+                client1 = gspread.authorize(creds1)
+                temp_document = client1.open('temp-' + storage_name)
+                temp_worksheet = temp_document.worksheet('old')
+                values = temp_worksheet.col_values(1)
+                document = client1.open(storage_name)
+                for i in document.worksheets():
+                    if int(i.title) > worksheet_number:
+                        worksheet_number = int(i.title)
+                worksheet = document.add_worksheet(str(worksheet_number + 1), limit, 1)
+                worksheet.format('A1:A' + str(limit), {'horizontalAlignment': 'CENTER'})
+                document.batch_update(properties_json(worksheet.id))
+                cell_list = worksheet.range('A1:A' + str(limit))
+                dev = edit_dev_message(dev, italic('\n— Новая: ' + storage_name + '/' + str(worksheet_number + 1)))
+                for g in range(0, len(values)):
+                    cell_list[g].value = values[g]
+                worksheet.update_cells(cell_list)
+                document = client1.create('temp-' + storage_name)
+                for i in variable['emails'][server]:
+                    document.share(i, 'user', 'writer', False)
+                worksheet = document.add_worksheet(title='old', rows=limit, cols=1)
+                worksheet.format('A1:A' + str(limit), {'horizontalAlignment': 'CENTER'})
+                document.batch_update(properties_json(worksheet.id))
+                document.del_worksheet(document.worksheet('Sheet1'))
+                client1.del_spreadsheet(temp_document.id)
+                worksheet.update_cell(1, 1, option)
+                edit_dev_message(dev, italic('\n— Успешно'))
+                old_values = []
+                sleep(30)
+            else:
+                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+                client1 = gspread.authorize(creds1)
+                worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
+                worksheet.update_cell(len(old_values) + 1, 1, option)
 
 
 def updater(pos, cost, stat, const):
@@ -193,7 +240,7 @@ def updater(pos, cost, stat, const):
         cell_list[1].value = cost
         cell_list[2].value = stat
         data2.update_cells(cell_list)
-    except:
+    except IndexError and Exception:
         creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
         client2 = gspread.authorize(creds2)
         data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
@@ -206,307 +253,136 @@ def updater(pos, cost, stat, const):
     printer('i = ' + str(pos) + ' новое')
 
 
-def tele_request():
-    text = requests.get('https://t.me/lot_updater/' + str(variable['lots_post_id'][server]) + '?embed=1')
+def former(text, form='new'):
     soup = BeautifulSoup(text.text, 'html.parser')
-    is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
-    if str(is_post_not_exist) == 'None':
-        grow = str(soup.find('div', class_='tgme_widget_message_text js-message_text'))
-        grow = re.sub(' (dir|class|style)=\\"\w+[^\\"]+\\"', '', grow)
-        grow = re.sub('(<b>|</b>|<i>|</i>|<div>|</div>|<br/>|<code>|</code>)', '', grow)
-        if grow == 'None':
-            massive = ['']
+    is_post_not_exist = soup.find('div', class_='tgme_widget_message_error')
+    if is_post_not_exist is None:
+        stamp_day_ago = int(datetime.now().timestamp()) - 24 * 60 * 60
+        lot_raw = str(soup.find('div', class_='tgme_widget_message_text js-message_text')).replace('<br/>', '\n')
+        au_id = re.sub('t.me/.*?/', '', soup.find('div', class_='tgme_widget_message_link').get_text())
+        lot = BeautifulSoup(lot_raw, 'html.parser').get_text()
+        response = {'raw': au_id + '/' + re.sub('/', '&#47;', lot).replace('\n', '/')}
+        if form == 'new':
+            response = form_mash(response['raw'])
         else:
-            massive = grow.split('/')
-    else:
-        massive = ['drop']
-    return massive
-
-
-def editor(text, printext):
-    try:
-        bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
-    except:
-        printext += ' (пост не изменился)'
-    printer(printext)
-
-
-def printer(printer_text):
-    thread_name = str(thread_array[_thread.get_ident()]['name'])
-    logfile = open('log.txt', 'a')
-    log_print_text = thread_name + ' ' + printer_text
-    logfile.write('\n' + re.sub('<.*?>', '', logtime(0)) + log_print_text)
-    logfile.close()
-    print(log_print_text)
-
-
-array = tele_request()
-if array[0] == 'drop':
-    _thread.exit()
-
-
-start_string = 'INSERT INTO old (auid, lotid, enchanted, name, quality, ' \
-               'condition, seller, cost, buyer, stamp, status) VALUES '
-stamp_now = int(datetime.now().timestamp()) - 36 * 60 * 60
-google = data1.col_values(1)
-db = SQLighter('old.db')
-ignore = str(google[0])
-ignore = ignore.split('/')
-old = int(google[1])
-new = copy.copy(old)
-check = copy.copy(old)
-firstopen = 1
-google.pop(0)
-google.pop(0)
-string = ''
-point = 0
-perk = 3
-# ====================================================================================
-start_message = bot.send_message(idMe, code(logtime(stamp1) + '\n' + logtime(0)), parse_mode='HTML')
-logfile_start = open('log.txt', 'w')
-logfile_start.write('Начало записи лога ' + re.sub('<.*?>', '', logtime(0)))
-logfile_start.close()
-
-
-for i in google:
-    perk += 1
-    if len(i) > 0:
-        row = form_mash(i)
-        string += "('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}'), "\
-            .format(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
-        point += 1
-        if point == 1000:
-            string = string.rstrip()
-            string = string[:-1]
-            string += ';'
-            db.create_lots(start_string + string)
-            string = ''
-            point = 0
-    else:
-        bot.send_message(idMe, 'В базе ' + variable['file'][server] + ' нежелательный элемент за номером ' +
-                         str(perk) + ' сотворил злую шутку, исправь')
-        continue
-if string != '':
-    string = string.rstrip()
-    string = string[:-1]
-    string += ';'
-    db.create_lots(start_string + string)
-    string = ''
-
-double = []
-double_raw = db.get_double()
-if str(double_raw) != 'False':
-    for i in double_raw:
-        auid = str(i[0]) + '/' + variable['lot'][server] + str(i[1]) + ' :'
-        if auid not in double:
-            double.append(auid)
-for id in double:
-    for lot in google:
-        if id in lot:
-            letter = ''
-            rows = lot.split('/')
-            for i in rows:
-                if rows.index(i) == 0:
-                    letter += i + '/'
-                else:
-                    letter += i + '\n'
-            position = str(google.index(lot) + 3)
-            bot.send_message(idMe, 'Повторяющийся на позиции ' + bold(position) + ' в базе элемент:\n\n' +
-                             code(letter), parse_mode='HTML')
-
-# ====================================================================================
-
-draw = code(start_message.text + '\n' + logtime(0))
-try:
-    bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
-                          message_id=start_message.message_id, parse_mode='HTML')
-except:
-    draw += bold('\nСтарые посты из таблицы добавлены в бота.\nНе смог отредактировать сообщение.')
-    bot.send_message(idMe, draw, parse_mode='HTML')
-
-
-def executive(new):
-    global thread_array
-    search = re.search('<function (\S+)', str(new))
-    if search:
-        name = search.group(1)
-    else:
-        name = ''
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
-    error = ''
-    for i in error_raw:
-        error += str(i)
-    bot.send_message(idMe, 'Вылет ' + name + '\n' + error)
-    sleep(100)
-    thread_id = _thread.start_new_thread(new, ())
-    thread_array[thread_id] = defaultdict(dict)
-    thread_array[thread_id]['name'] = name
-    thread_array[thread_id]['function'] = new
-    bot.send_message(idMe, 'Запущен ' + bold(name), parse_mode='HTML')
-    sleep(30)
-    _thread.exit()
-
-
-def former(text, id, type):
-    goo = []
-    soup = BeautifulSoup(text.text, 'html.parser')
-    is_post_not_exist = str(soup.find('div', class_='tgme_widget_message_error'))
-    if str(is_post_not_exist) == str(None):
-        stamp_now = int(datetime.now().timestamp()) - 24 * 60 * 60
-        string = str(soup.find('div', class_='tgme_widget_message_text js-message_text'))
-        string = re.sub(' (dir|class|style)=\\"\w+[^\\"]+\\"', '', string)
-        string = re.sub('(<b>|</b>|<i>|</i>|<div>|</div>)', '', string)
-        string = re.sub('/', '&#47;', string)
-        string = re.sub('(<br&#47;>)', '/', string)
-        string = str(id) + '/' + string
-
-        if type == 'old':
             drop_time = soup.find('time', class_='datetime')
-            stamp = int(
-                time.mktime(datetime.strptime(str(drop_time['datetime']), '%Y-%m-%dT%H:%M:%S+00:00').timetuple()))
-            if stamp <= stamp_now:
-                goo.append(string)
-            else:
-                goo.append('active')
-        else:
-            goo = form_mash(string)
+            stamp = stamper(str(drop_time['datetime']), '%Y-%m-%dT%H:%M:%S+00:00')
+            if stamp > stamp_day_ago:
+                response = {'raw': 'active'}
     else:
-        goo.append('false')
-    return goo
+        response = {'raw': 'False'}
+    return response
 
 
 def oldest():
     while True:
         try:
-            global data1
             global old
-            sleep(1)
-            printext = variable['destination'][server] + str(old)
-            text = requests.get(printext + '?embed=1')
-            if str(old) not in ignore:
-                goo = former(text, old, 'old')
-                if goo[0] == 'active':
-                    printext += ' Активен, ничего не делаю'
-                    sleep(7)
-                elif goo[0] == 'false':
-                    printext += ' Форму не нашло'
-                else:
-                    old = old + 1
-                    try:
-                        data1.insert_row(goo, 3)
-                        data1.update_cell(2, 1, old)
-                    except:
-                        creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
-                        client1 = gspread.authorize(creds1)
-                        data1 = client1.open(variable['file'][server]).worksheet('old')
-                        data1.insert_row(goo, 3)
-                        data1.update_cell(2, 1, old)
-                    sleep(6)
-                    printext += ' Добавил в google старый лот'
+            print_text = variable['destination'][server] + str(old)
+            text = requests.get(print_text + '?embed=1')
+            response = former(text, 'old')
+            if response['raw'] == 'active':
+                print_text += ' Активен, ничего не делаю'
+                sleep(7)
+            elif response['raw'] == 'False':
+                print_text += ' Форму не нашло'
+                sleep(1)
             else:
-                printext += ' В черном списке, пропускаю'
                 old = old + 1
-            printer(printext)
-        except IndexError:
-            executive(oldest)
+                google('old_insert', response['raw'])
+                old_values.append(response['raw'])
+                sleep(1)
+                print_text += ' Добавил в google старый лот'
+            printer(print_text)
+        except IndexError and Exception:
+            executive()
 
 
 def detector():
     while True:
         try:
             global new
-            global draw
-            global data5
-            global firstopen
+            global first_open
             db = SQLighter('old.db')
             db_new = SQLighter('new.db')
-            if firstopen == 1:
-                a_lots = tele_request()
-                for i in a_lots:
-                    if i != '' and i != 'drop':
-                        text = requests.get(variable['destination'][server] + i + '?embed=1')
-                        sleep(0.01)
-                        try:
-                            auid_raw = db_new.get_new_auid()
-                        except:
-                            sleep(2)
-                            auid_raw = db_new.get_new_auid()
-                        auid = []
-                        if str(auid_raw) != 'False':
-                            for g in auid_raw:
-                                auid.append(g[0])
-                        goo = former(text, int(i), 'new')
-                        if goo[0] != 'false':
-                            if goo[10] == '#active' and int(goo[0]) not in auid:
-                                try:
-                                    db_new.create_new_lot(goo[0])
-                                except:
-                                    sleep(2)
-                                    db_new.create_new_lot(goo[0])
-                firstopen = 0
-
-            sleep(0.3)
-            printext = variable['destination'][server] + str(new)
-            text = requests.get(printext + '?embed=1')
-            if str(new) not in ignore:
-                goo = former(text, new, 'new')
-                if goo[0] != 'false':
-                    if goo[10] == '#active':
-                        try:
-                            auid_raw = db_new.get_new_auid()
-                        except:
-                            sleep(2)
-                            auid_raw = db_new.get_new_auid()
-                        auid = []
-                        if str(auid_raw) != 'False':
-                            for g in auid_raw:
-                                auid.append(g[0])
-                        if int(goo[0]) not in auid:
+            if first_open == 1:
+                lots_raw = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
+                if lots_raw:
+                    a_lots = lots_raw.group(1).split('/')
+                    for i in a_lots:
+                        if i != '':
+                            text = requests.get(variable['destination'][server] + i + '?embed=1')
+                            sleep(0.01)
                             try:
-                                db_new.create_new_lot(goo[0])
+                                auid_raw = db_new.get_new_auid()
                             except:
                                 sleep(2)
-                                db_new.create_new_lot(goo[0])
-                            printext += ' Добавлен в базу активных'
-                        else:
-                            printext += ' Уже есть в базе активных'
-                    else:
-                        auid_raw_old = db.get_auid()
-                        auid_old = []
-                        if str(auid_raw_old) != 'False':
-                            for g in auid_raw_old:
-                                auid_old.append(g[0])
-                        if int(goo[0]) not in auid_old:
-                            db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
-                                          goo[6], goo[7], goo[8], goo[9], goo[10])
-                        printext += ' Добавил в базу старых'
-                    new += 1
-                else:
-                    printext += ' Форму не нашло'
-                    sleep(8)
-                    if firstopen == 0:
-                        draw += '\n' + code(logtime(0))
+                                auid_raw = db_new.get_new_auid()
+                            auid = []
+                            if str(auid_raw) != 'False':
+                                for g in auid_raw:
+                                    auid.append(g[0])
+                            goo = former(text)
+                            if goo[0] != 'False':
+                                if goo[10] == '#active' and int(goo[0]) not in auid:
+                                    try:
+                                        db_new.create_new_lot(goo[0])
+                                    except:
+                                        sleep(2)
+                                        db_new.create_new_lot(goo[0])
+                    first_open = 0
+
+            sleep(0.3)
+            print_text = variable['destination'][server] + str(new)
+            text = requests.get(print_text + '?embed=1')
+            goo = former(text)
+            if goo[0] != 'False':
+                if goo[10] == '#active':
+                    try:
+                        auid_raw = db_new.get_new_auid()
+                    except:
+                        sleep(2)
+                        auid_raw = db_new.get_new_auid()
+                    auid = []
+                    if str(auid_raw) != 'False':
+                        for g in auid_raw:
+                            auid.append(g[0])
+                    if int(goo[0]) not in auid:
                         try:
-                            bot.edit_message_text(chat_id=start_message.chat.id, text=draw,
-                                                  message_id=start_message.message_id, parse_mode='HTML')
+                            db_new.create_new_lot(goo[0])
                         except:
-                            draw += bold('\nСтарые посты не из таблицы добавлены в бота.\n'
-                                         'Не смог отредактировать сообщение.')
-                            bot.send_message(idMe, draw, parse_mode='HTML')
-                        firstopen -= 1
+                            sleep(2)
+                            db_new.create_new_lot(goo[0])
+                        print_text += ' Добавлен в базу активных'
+                    else:
+                        print_text += ' Уже есть в базе активных'
+                else:
+                    auid_raw_old = db.get_auid()
+                    auid_old = []
+                    if str(auid_raw_old) != 'False':
+                        for g in auid_raw_old:
+                            auid_old.append(g[0])
+                    if int(goo[0]) not in auid_old:
+                        db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
+                                      goo[6], goo[7], goo[8], goo[9], goo[10])
+                    print_text += ' Добавил в базу старых'
+                new += 1
             else:
-                printext += ' В черном списке, пропускаю'
-            printer(printext)
-        except IndexError:
-            executive(detector)
+                print_text += ' Форму не нашло'
+                sleep(8)
+                if first_open == 0:
+                    edit_dev_message(s_message, '\n' + log_time(tag=code))
+                    first_open -= 1
+            printer(print_text)
+        except IndexError and Exception:
+            executive()
 
 
 def lot_updater():
     while True:
         try:
-            global firstopen
-            if firstopen == 1:
+            global first_open
+            if first_open == 1:
                 sleep(10)
             printer('начало')
             db = SQLighter('old.db')
@@ -523,8 +399,8 @@ def lot_updater():
             for i in auid:
                 text = requests.get(variable['destination'][server] + str(i) + '?embed=1')
                 sleep(5)
-                goo = former(text, int(i), 'new')
-                if goo[0] != 'false':
+                goo = former(text)
+                if goo[0] != 'False':
                     if goo[10] != '#active':
                         try:
                             db_new.delete_new_lot(goo[0])
@@ -541,71 +417,73 @@ def lot_updater():
                                           goo[6], goo[7], goo[8], goo[9], goo[10])
             printer('удалил закончившиеся из базы')
             sleep(5)
-        except IndexError:
-            executive(lot_updater)
+        except IndexError and Exception:
+            executive()
 
 
 def telegram():
     while True:
         try:
-            global firstopen
+            global first_open
             db_new = SQLighter('new.db')
-            if firstopen == 1:
+            if first_open == 1:
                 sleep(10)
-            if firstopen != 1:
+            if first_open != 1:
                 sleep(20)
                 printer('начало')
-                array = tele_request()
-                row = '/'
-                for i in array:
-                    if i != '':
-                        row += i + '/'
-                try:
-                    auid_raw = db_new.get_new_auid()
-                except:
-                    sleep(2)
-                    auid_raw = db_new.get_new_auid()
-                auid = []
-                if str(auid_raw) != 'False':
-                    for g in auid_raw:
-                        auid.append(g[0])
-                for i in auid:
-                    if str(i) not in array:
-                        if len(row) < 4085:
-                            row += str(i) + '/'
-                if row == '/':
-                    row = 'None'
+                lots_raw = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
+                if lots_raw:
+                    array = lots_raw.group(1).split('/')
+                    row = '/'
+                    for i in array:
+                        if i != '':
+                            row += i + '/'
+                    try:
+                        auid_raw = db_new.get_new_auid()
+                    except:
+                        sleep(2)
+                        auid_raw = db_new.get_new_auid()
+                    auid = []
+                    if str(auid_raw) != 'False':
+                        for g in auid_raw:
+                            auid.append(g[0])
+                    for i in auid:
+                        if str(i) not in array:
+                            if len(row) < 4085:
+                                row += str(i) + '/'
+                    if row == '/':
+                        row = 'None'
 
-                editor(row, 'добавил новые лоты в telegram')
+                    editor(row, 'добавил новые лоты в telegram')
 
-                if row != 'None':
-                    array = row.split('/')
-                else:
-                    array = []
-                try:
-                    auid_raw = db_new.get_new_auid()
-                except:
-                    sleep(2)
-                    auid_raw = db_new.get_new_auid()
-                auid = []
-                if str(auid_raw) != 'False':
-                    for g in auid_raw:
-                        auid.append(g[0])
-                for i in array:
-                    if i != '':
-                        if int(i) not in auid:
-                            row = re.sub('/' + str(i) + '/', '/', row)
-                if row == '/':
-                    row = 'None'
-                editor(row, 'удалил закончившиеся из google')
-        except IndexError:
-            executive(telegram)
+                    if row != 'None':
+                        array = row.split('/')
+                    else:
+                        array = []
+                    try:
+                        auid_raw = db_new.get_new_auid()
+                    except:
+                        sleep(2)
+                        auid_raw = db_new.get_new_auid()
+                    auid = []
+                    if str(auid_raw) != 'False':
+                        for g in auid_raw:
+                            auid.append(g[0])
+                    for i in array:
+                        if i != '':
+                            if int(i) not in auid:
+                                row = re.sub('/' + str(i) + '/', '/', row)
+                    if row == '/':
+                        row = 'None'
+                    editor(row, 'удалил закончившиеся из google')
+        except IndexError and Exception:
+            executive()
 
 
 def messages():
     while True:
         try:
-            if firstopen == -1:
+            if first_open == -1:
                 global data2
                 printer('начало')
                 db = SQLighter('old.db')
@@ -752,8 +630,8 @@ def messages():
                 printer('конец')
             else:
                 sleep(20)
-        except IndexError:
-            executive(messages)
+        except IndexError and Exception:
+            executive()
 
 
 @bot.message_handler(func=lambda message: message.text)
@@ -780,20 +658,14 @@ def repeat_all_messages(message):
 def telepol():
     try:
         bot.polling(none_stop=True, timeout=60)
-    except:
+    except IndexError and Exception:
         bot.stop_polling()
         sleep(1)
         telepol()
 
 
 if __name__ == '__main__':
-    gain = [oldest, detector, lot_updater, telegram, messages]
-    thread_array = defaultdict(dict)
-    for i in gain:
-        thread_id = _thread.start_new_thread(i, ())
-        thread_start_name = re.findall('<.+?\s(.+?)\s.*>', str(i))
-        thread_array[thread_id] = defaultdict(dict)
-        thread_array[thread_id]['name'] = thread_start_name[0]
-        thread_array[thread_id]['function'] = i
+    gain = [oldest]
+    for thread_element in gain:
+        _thread.start_new_thread(thread_element, ())
     telepol()
-
