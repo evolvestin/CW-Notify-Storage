@@ -152,7 +152,7 @@ def database_filler():
             if lot_header not in double:
                 double.append(lot_header)
     for lot_header in double:
-        send_dev_message(variable['document'][server], 'Повторяющийся в базе элемент: ' + bold(lot_header))
+        printer('Повторяющийся в базе элемент: ' + str(lot_header))
     worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
     old_values = worksheet.col_values(1)
 
