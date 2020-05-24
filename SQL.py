@@ -12,29 +12,28 @@ class SQLighter:
         self.connection.close()
 
     # current_open
-    def create_lot(self, auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status):
+    def create_lot(self, array):
         with self.connection:
-            self.cursor.execute('INSERT INTO old (auid, lotid, enchanted, name, quality, condition, seller, cost, '
-                                'buyer, stamp, status) '
-                                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                                (auid, lotid, enchanted, name, quality, castle, seller, cost, buyer, stamp, status,))
+            self.cursor.execute('INSERT INTO old (au_id, lot_id, enchant, item_name, quality, '
+                                'condition, modifiers, seller, cost, buyer, stamp, status) '
+                                'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (*array,))
 
-    def create_new_lot(self, auid):
+    def create_new_lot(self, au_id):
         with self.connection:
-            self.cursor.execute('INSERT INTO actives (auid) VALUES (?)', (auid,))
+            self.cursor.execute('INSERT INTO actives (au_id) VALUES (?)', (au_id,))
 
     def create_lots(self, sql):
         with self.connection:
             self.cursor.execute(sql)
 
-    def delete_new_lot(self, auid):
+    def delete_new_lot(self, au_id):
         with self.connection:
-            self.cursor.execute('DELETE FROM actives WHERE auid = ?', (auid,))
+            self.cursor.execute('DELETE FROM actives WHERE au_id = ?', (au_id,))
 
     def get_double(self):
         with self.connection:
-            result = self.cursor.execute('SELECT * FROM old WHERE auid IN '
-                                         '(SELECT auid FROM old GROUP BY auid HAVING COUNT(*) > 1)').fetchall()
+            result = self.cursor.execute('SELECT * FROM old WHERE au_id IN '
+                                         '(SELECT au_id FROM old GROUP BY au_id HAVING COUNT(*) > 1)').fetchall()
             if result:
                 return result
             else:
@@ -56,18 +55,24 @@ class SQLighter:
         else:
             return False
 
-    def get_new_auid(self):
+    def get_new_au_id(self):
         with self.connection:
-            result = self.cursor.execute('SELECT auid FROM actives').fetchall()
+            result = self.cursor.execute('SELECT au_id FROM actives').fetchall()
         if result:
-            return result
+            result_array = []
+            for i in result:
+                result_array.append(i[0])
+            return result_array
         else:
-            return False
+            return []
 
-    def get_auid(self):
+    def get_au_id(self):
         with self.connection:
-            result = self.cursor.execute('SELECT auid FROM old').fetchall()
+            result = self.cursor.execute('SELECT au_id FROM old').fetchall()
         if result:
-            return result
+            result_array = []
+            for i in result:
+                result_array.append(i[0])
+            return result_array
         else:
-            return False
+            return []
