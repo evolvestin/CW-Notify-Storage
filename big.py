@@ -25,7 +25,7 @@ from additional.objects import stamper
 from additional.objects import send_dev_message
 from additional.objects import edit_dev_message
 from additional.objects import thread_exec as executive
-from game_time import timer
+from additional.game_time import timer
 
 stamp1 = int(datetime.now().timestamp())
 server = dimensional.server
