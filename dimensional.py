@@ -16,6 +16,10 @@ res['file'] = defaultdict(dict)
 res['file']['cw2'] = 'eustorage'
 res['file']['cw3'] = 'storage'
 
+res['document'] = defaultdict(dict)
+res['document']['cw2'] = 'eu_storage'
+res['document']['cw3'] = 'ru_storage'
+
 res['json_old'] = defaultdict(dict)
 res['json_old']['cw2'] = 'eustorage1.json'
 res['json_old']['cw3'] = 'bigdata1.json'
@@ -41,6 +45,41 @@ res['lot']['cw2'] = 'Lot #'
 res['lot']['cw3'] = 'Лот #'
 
 # ---------------------- forms ----------------------
+
+res['form']['cw2'] = {
+    'title': 'Lot #(\d+) : (.*)',
+    'quality': 'Quality: (.*)',
+    'condition': 'Condition: (.*)',
+    'modifiers': 'Modifiers:',
+    'seller': 'Seller: (.*)',
+    'cost': 'Current price: (\d+) pouch\(es\)',
+    'buyer': 'Buyer: (.+)',
+    'stamp': 'End At: (\d{2}) (.*) 10(\d{2}) (\d{2}):(\d{2})',
+    'status': 'Status: (#active|Finished|Cancelled|Failed)'
+}
+
+res['form']['cw3'] = {
+    'title': 'Лот #(\d+) : (.*)',
+    'quality': 'Качество: (.*)',
+    'condition': 'Состояние: (.*)',
+    'modifiers': 'Modifiers:',
+    'seller': 'Продавец: (.*)',
+    'cost': 'Текущая .*: (\d+) 👝',
+    'buyer': 'Покупатель: (.+)',
+    'stamp': 'Срок: (\d{2}) (.*) 10(\d{2}) (\d{2}):(\d{2})',
+    'status': 'Статус: (#active|Finished|Cancelled|Failed)'
+}
+
+absolute_emails = ['larik.live@gmail.com', 'weeueks3@gmail.com', 'xstorage1@storage-216513.iam.gserviceaccount.com']
+
+res['emails']['cw3'] = [*absolute_emails, 'auinfo1@notify-209915.iam.gserviceaccount.com',
+                        'bigdata@bigeye.iam.gserviceaccount.com',
+                        'bigdata2@bigeye.iam.gserviceaccount.com']
+
+res['emails']['cw2'] = [*absolute_emails, 'euauction1@euauction-213512.iam.gserviceaccount.com',
+                        'eustorage1@storageeu-217910.iam.gserviceaccount.com',
+                        'eustorage2@storageeu-217910.iam.gserviceaccount.com']
+
 res['title'] = defaultdict(dict)
 res['title']['cw2'] = 'Lot #(\d+) : (.*)'
 res['title']['cw3'] = 'Лот #(\d+) : (.*)'
