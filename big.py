@@ -287,9 +287,9 @@ def oldest():
             if response['raw'] == 'active':
                 print_text += ' Активен, ничего не делаю'
                 sleep(7)
-            elif response['raw'] == 'False':
+            elif response['raw'].startswith('False'):
                 print_text += ' Форму не нашло'
-                sleep(1)
+                sleep(10)
             else:
                 old = old + 1
                 google('old_insert', response['raw'])
