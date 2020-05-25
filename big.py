@@ -7,25 +7,16 @@ import requests
 import datetime
 import dimensional
 from time import sleep
+import concurrent.futures
 from SQL import SQLighter
 from bs4 import BeautifulSoup
 from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
-
-from additional.objects import bold
-from additional.objects import code
-from additional.objects import start_main_bot
-from additional.objects import start_message
-from additional.objects import log_time
-from additional.objects import printer
-from additional.objects import query
-from additional.objects import italic
-from additional.objects import properties_json
-from additional.objects import stamper
-from additional.objects import send_dev_message
-from additional.objects import edit_dev_message
-from additional.objects import thread_exec as executive
 from additional.game_time import timer
+from requests_futures.sessions import FuturesSession
+from additional.objects import thread_exec as executive
+from oauth2client.service_account import ServiceAccountCredentials
+from additional.objects import code, bold, query, italic, printer, stamper, log_time, secure_sql, \
+    start_message, start_main_bot, properties_json, send_dev_message, edit_dev_message
 
 stamp1 = int(datetime.now().timestamp())
 server = dimensional.server
@@ -33,13 +24,17 @@ variable = dimensional.res
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 start_sql_request = 'INSERT INTO old (au_id, lot_id, enchant, item_name, quality, ' \
                     'condition, modifiers, seller, cost, buyer, stamp, status) VALUES '
+start_sql_update = 'INSERT INTO old (au_id, lot_id, enchant, item_name, quality, ' \
+                    'condition, modifiers, seller, cost, buyer, stamp, status) VALUES '
 properties_title_list = ['lot_id', 'enchant', 'item_name', 'quality', 'condition',
                          'modifiers', 'seller', 'cost', 'buyer', 'stamp', 'status', 'raw']
 lot_updater_channel = 'https://t.me/lot_updater/'
+first_open = True
+update_array = []
 idMe = 396978030
 old_values = []
-first_open = 1
 limit = 50000
+limiter = 300
 old = 1
 # ====================================================================================
 
@@ -152,7 +147,7 @@ def database_filler():
             if lot_header not in double:
                 double.append(lot_header)
     for lot_header in double:
-        printer('Повторяющийся в базе элемент: ' + str(lot_header))
+        send_dev_message(variable['document'][server], 'Повторяющийся в базе элемент: ' + bold(lot_header))
     worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
     old_values = worksheet.col_values(1)
 
@@ -170,6 +165,11 @@ bot = start_main_bot('non-async', variable['TOKEN'][server])
 new = copy.copy(old + 1)
 old += 1
 # ====================================================================================
+
+
+def last_time_request():
+    global last_requested
+    last_requested = int(datetime.now().timestamp())
 
 
 def editor(text, print_text):
@@ -232,23 +232,23 @@ def google(action, option=None):
 
 
 def updater(pos, cost, stat, const):
-    global data2
+    global worksheet_storage
     row = str(pos + 1)
     try:
-        cell_list = data2.range('A' + row + ':C' + row)
+        cell_list = worksheet_storage.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
-        data2.update_cells(cell_list)
+        worksheet_storage.update_cells(cell_list)
     except IndexError and Exception:
         creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
         client2 = gspread.authorize(creds2)
-        data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
-        cell_list = data2.range('A' + row + ':C' + row)
+        worksheet_storage = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
+        cell_list = worksheet_storage.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
         cell_list[2].value = stat
-        data2.update_cells(cell_list)
+        worksheet_storage.update_cells(cell_list)
     sleep(1)
     printer('i = ' + str(pos) + ' новое')
 
@@ -302,77 +302,67 @@ def detector():
     while True:
         try:
             global new
+            global limiter
             global first_open
+            if first_open:
+                loop = True
+                request_array = []
+                while loop is True:
+                    futures = []
+                    au_id_array = []
+                    sql_request_line = ''
+                    session = FuturesSession()
+                    if len(request_array) == 0:
+                        request_array = range(new, new + limiter)
+                    for k in request_array:
+                        url = variable['destination'][server] + str(k) + '?embed=1'
+                        futures.append(session.get(url))
+                        au_id_array.append(k)
+                        limiter -= 1
+                    request_array = []
+                    for future in concurrent.futures.as_completed(futures):
+                        last_time_request()
+                        result = former(future.result().content)
+                        if result['raw'] == 'False':
+                            edit_dev_message(s_message, '\n' + log_time(tag=code))
+                            first_open = False
+                            loop = False
+                            new -= 30
+                            break
+                        elif result['raw'] != 'FalseRequests' and result['raw'] != 'False':
+                            au_id_array[au_id_array.index(result['au_id'])] = None
+                            if result['au_id'] > new:
+                                new = result['au_id']
+                            sql_request_line += "('{}', '{}', '{}', '{}', '{}', '{}', " \
+                                                "'{}', '{}', '{}', '{}', '{}', '{}'), ".format(*result.values())
+                    for k in au_id_array:
+                        if k is not None:
+                            request_array.append(k)
+                    if sql_request_line != '':
+                        db = SQLighter('old.db')
+                        sql_request_line = sql_request_line.rstrip()
+                        sql_request_line = sql_request_line[:-1] + ';'
+                        secure_sql(db.create_lots, start_sql_request + sql_request_line)
+                    if limiter <= 0:
+                        delay = 60 - (int(datetime.now().timestamp()) - last_requested)
+                        limiter = 300
+                        sleep(delay)
             db = SQLighter('old.db')
-            db_new = SQLighter('new.db')
-            if first_open == 1:
-                lots_raw = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
-                if lots_raw:
-                    a_lots = lots_raw.group(1).split('/')
-                    for i in a_lots:
-                        if i != '':
-                            text = requests.get(variable['destination'][server] + i + '?embed=1')
-                            sleep(0.01)
-                            try:
-                                auid_raw = db_new.get_new_auid()
-                            except:
-                                sleep(2)
-                                auid_raw = db_new.get_new_auid()
-                            auid = []
-                            if str(auid_raw) != 'False':
-                                for g in auid_raw:
-                                    auid.append(g[0])
-                            goo = former(text)
-                            if goo[0] != 'False':
-                                if goo[10] == '#active' and int(goo[0]) not in auid:
-                                    try:
-                                        db_new.create_new_lot(goo[0])
-                                    except:
-                                        sleep(2)
-                                        db_new.create_new_lot(goo[0])
-                    first_open = 0
-
-            sleep(0.3)
             print_text = variable['destination'][server] + str(new)
             text = requests.get(print_text + '?embed=1')
-            goo = former(text)
-            if goo[0] != 'False':
-                if goo[10] == '#active':
-                    try:
-                        auid_raw = db_new.get_new_auid()
-                    except:
-                        sleep(2)
-                        auid_raw = db_new.get_new_auid()
-                    auid = []
-                    if str(auid_raw) != 'False':
-                        for g in auid_raw:
-                            auid.append(g[0])
-                    if int(goo[0]) not in auid:
-                        try:
-                            db_new.create_new_lot(goo[0])
-                        except:
-                            sleep(2)
-                            db_new.create_new_lot(goo[0])
-                        print_text += ' Добавлен в базу активных'
-                    else:
-                        print_text += ' Уже есть в базе активных'
+            response = former(text)
+            if response['raw'] != 'False':
+                del response['raw']
+                au_id = secure_sql(db.get_au_id)
+                if response['au_id'] not in au_id:
+                    secure_sql(db.create_lot, response.values())
+                    print_text += ' Добавлен в базу'
                 else:
-                    auid_raw_old = db.get_auid()
-                    auid_old = []
-                    if str(auid_raw_old) != 'False':
-                        for g in auid_raw_old:
-                            auid_old.append(g[0])
-                    if int(goo[0]) not in auid_old:
-                        db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
-                                      goo[6], goo[7], goo[8], goo[9], goo[10])
-                    print_text += ' Добавил в базу старых'
+                    print_text += ' Уже есть в базе'
                 new += 1
             else:
                 print_text += ' Форму не нашло'
                 sleep(8)
-                if first_open == 0:
-                    edit_dev_message(s_message, '\n' + log_time(tag=code))
-                    first_open -= 1
             printer(print_text)
         except IndexError and Exception:
             executive()
@@ -381,42 +371,44 @@ def detector():
 def lot_updater():
     while True:
         try:
-            global first_open
-            if first_open == 1:
-                sleep(10)
-            printer('начало')
-            db = SQLighter('old.db')
-            db_new = SQLighter('new.db')
-            try:
-                auid_raw = db_new.get_new_auid()
-            except:
-                sleep(2)
-                auid_raw = db_new.get_new_auid()
-            auid = []
-            if str(auid_raw) != 'False':
-                for g in auid_raw:
-                    auid.append(g[0])
-            for i in auid:
-                text = requests.get(variable['destination'][server] + str(i) + '?embed=1')
-                sleep(5)
-                goo = former(text)
-                if goo[0] != 'False':
-                    if goo[10] != '#active':
-                        try:
-                            db_new.delete_new_lot(goo[0])
-                        except:
-                            sleep(2)
-                            db_new.delete_new_lot(goo[0])
-                        auid_raw_old = db.get_auid()
-                        auid_old = []
-                        if str(auid_raw_old) != 'False':
-                            for g in auid_raw_old:
-                                auid_old.append(g[0])
-                        if int(goo[0]) not in auid_old:
-                            db.create_lot(goo[0], goo[1], goo[2], goo[3], goo[4], goo[5],
-                                          goo[6], goo[7], goo[8], goo[9], goo[10])
-            printer('удалил закончившиеся из базы')
-            sleep(5)
+            global limiter
+            global update_array
+            if first_open:
+                sleep(30)
+            else:
+                point = 0
+                futures = []
+                au_id_array = []
+                sql_request_array = []
+                db = SQLighter('old.db')
+                session = FuturesSession()
+                if len(update_array) == 0:
+                    update_array = secure_sql(db.get_active_au_id)
+                for k in update_array:
+                    url = variable['destination'][server] + str(k) + '?embed=1'
+                    futures.append(session.get(url))
+                    au_id_array.append(k)
+                    limiter -= 1
+                update_array = []
+                for future in concurrent.futures.as_completed(futures):
+                    last_time_request()
+                    result = former(future.result().content)
+                    if result['raw'] != 'FalseRequests' and result['raw'] != 'False':
+                        au_id_array[au_id_array.index(result['au_id'])] = None
+                        if result['status'] != '#active':
+                            point += 1
+                            sql_request_array.append(result)
+                for k in au_id_array:
+                    if k is not None:
+                        update_array.append(k)
+                for k in sql_request_array:
+                    secure_sql(db.update_lot, k)
+                printer('Обновлено лотов в базе ' + str(len(sql_request_array)))
+                if limiter <= 0:
+                    delay = 60 - (int(datetime.now().timestamp()) - last_requested)
+                    printer('Ухожу в сон на ' + str(delay) + ' секунд')
+                    limiter = 300
+                    sleep(delay)
         except IndexError and Exception:
             executive()
 
@@ -425,10 +417,10 @@ def telegram():
     while True:
         try:
             global first_open
-            db_new = SQLighter('new.db')
-            if first_open == 1:
+            db = SQLighter('old.db')
+            if first_open:
                 sleep(10)
-            if first_open != 1:
+            else:
                 sleep(20)
                 printer('начало')
                 lots_raw = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
@@ -438,16 +430,8 @@ def telegram():
                     for i in array:
                         if i != '':
                             row += i + '/'
-                    try:
-                        auid_raw = db_new.get_new_auid()
-                    except:
-                        sleep(2)
-                        auid_raw = db_new.get_new_auid()
-                    auid = []
-                    if str(auid_raw) != 'False':
-                        for g in auid_raw:
-                            auid.append(g[0])
-                    for i in auid:
+                    au_id = secure_sql(db.get_active_au_id)
+                    for i in au_id:
                         if str(i) not in array:
                             if len(row) < 4085:
                                 row += str(i) + '/'
@@ -456,22 +440,10 @@ def telegram():
 
                     editor(row, 'добавил новые лоты в telegram')
 
-                    if row != 'None':
-                        array = row.split('/')
-                    else:
-                        array = []
-                    try:
-                        auid_raw = db_new.get_new_auid()
-                    except:
-                        sleep(2)
-                        auid_raw = db_new.get_new_auid()
-                    auid = []
-                    if str(auid_raw) != 'False':
-                        for g in auid_raw:
-                            auid.append(g[0])
+                    au_id = secure_sql(db.get_active_au_id)
                     for i in array:
                         if i != '':
-                            if int(i) not in auid:
+                            if int(i) not in au_id:
                                 row = re.sub('/' + str(i) + '/', '/', row)
                     if row == '/':
                         row = 'None'
@@ -483,123 +455,110 @@ def telegram():
 def messages():
     while True:
         try:
-            if first_open == -1:
-                global data2
+            if first_open is None:
+                global worksheet_storage
+                point = 0
+                const = []
                 printer('начало')
                 db = SQLighter('old.db')
                 creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
                 client2 = gspread.authorize(creds2)
-                data2 = client2.open('Notify').worksheet('const_items')
-                const_pre = data2.col_values(2)
-                data2 = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
-                google = data2.col_values(3)
+                const_pre = client2.open('Notify').worksheet('const_items').col_values(2)
+                worksheet_storage = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
+                old_stats = worksheet_storage.col_values(3)
                 sleep(2)
-                const = []
                 for g in const_pre:
                     const.append(g + '/none')
-                    qualities_raw = db.get_quality(g)
-                    if str(qualities_raw) != 'False':
-                        qualities = []
-                        for f in qualities_raw:
-                            splited = f[0].split('.')
-                            if splited[0] not in qualities:
-                                qualities.append(splited[0])
-                        if len(qualities) > 1:
-                            const.append(g + '/Common')
-                        for f in qualities:
-                            if f != 'none':
-                                const.append(g + '/' + f)
-                i = 0
-                while i < len(const):
+                    qualities = secure_sql(db.get_quality, g)
+                    if len(qualities) > 1:
+                        const.append(g + '/Common')
+                    for q in qualities:
+                        if q != 'none':
+                            const.append(g + '/' + q)
+                while point < len(const):
                     text = ''
                     time_30 = int(datetime.now().timestamp()) - (7 * 24 * 60 * 60)
+                    f_max = 0
+                    max_30 = 0
                     newcol = []
-                    newcol_30 = []
                     unsold = []
+                    f_min = 1000
+                    min_30 = 1000
                     f_average = 0
+                    newcol_30 = []
                     average_30 = 0
                     f_un_average = 0
                     un_average_30 = 0
-                    f_min = 1000
-                    f_max = 0
-                    min_30 = 1000
-                    max_30 = 0
-                    splited = const[i].split('/')
-                    col = db.get_lots(splited[0])
-                    if str(col) != 'False':
-                        for z in col:
-                            qua = z[4].split('.')
-                            quality = qua[0]
-                            cost = z[7]
-                            buyer = z[8]
-                            stamp = z[9]
-                            status = z[10]
-                            if status != 'Cancelled':
-                                if quality == splited[1] or splited[1] == 'none' or \
-                                        (splited[1] == 'Common' and quality == 'none'):
-                                    if buyer != 'None':
-                                        if stamp >= time_30:
-                                            newcol_30.append(cost)
-                                            average_30 += cost
-                                            if min_30 > cost:
-                                                min_30 = cost
-                                            if max_30 < cost:
-                                                max_30 = cost
-                                        newcol.append(cost)
-                                        f_average += cost
-                                        if f_min > cost:
-                                            f_min = cost
-                                        if f_max < cost:
-                                            f_max = cost
-                                    else:
-                                        if stamp >= time_30:
-                                            un_average_30 += 1
-                                        unsold.append(cost)
-                                        f_un_average += 1
+                    split = const[point].split('/')
+                    col = secure_sql(db.get_lots, split[0])
+                    for z in col:
+                        quality = z[4]
+                        cost = z[8]
+                        buyer = z[9]
+                        stamp = z[10]
+                        status = z[11]
+                        if status != 'Cancelled':
+                            if quality == split[1] or split[1] == 'none' or \
+                                    (split[1] == 'Common' and quality == 'none'):
+                                if buyer != 'None':
+                                    if stamp >= time_30:
+                                        newcol_30.append(cost)
+                                        average_30 += cost
+                                        if min_30 > cost:
+                                            min_30 = cost
+                                        if max_30 < cost:
+                                            max_30 = cost
+                                    newcol.append(cost)
+                                    f_average += cost
+                                    if f_min > cost:
+                                        f_min = cost
+                                    if f_max < cost:
+                                        f_max = cost
+                                else:
+                                    if stamp >= time_30:
+                                        un_average_30 += 1
+                                    unsold.append(cost)
+                                    f_un_average += 1
 
-                        if len(newcol) > 0:
-                            last = newcol[len(newcol) - 1]
-                            lastsold = '_{8} ' + str(last)
-                        else:
-                            lastsold = ''
-
-                        newcol.sort()
-                        newcol_30.sort()
-
-                        if len(newcol) % 2 == 0 and len(newcol) != 0:
-                            lot1 = int(newcol[len(newcol) // 2])
-                            lot2 = int(newcol[len(newcol) // 2 - 1])
-                            median = round((lot1 + lot2) / 2, 2)
-                            if (median % int(median)) == 0:
-                                median = int(median)
-                        elif len(newcol) == 0:
-                            median = 0
-                        else:
-                            median = int(newcol[len(newcol) // 2])
-
-                        if len(newcol_30) % 2 == 0 and len(newcol_30) != 0:
-                            lot1_30 = int(newcol_30[len(newcol_30) // 2])
-                            lot2_30 = int(newcol_30[len(newcol_30) // 2 - 1])
-                            median_30 = round((lot1_30 + lot2_30) / 2, 2)
-                            if (median_30 % int(median_30)) == 0:
-                                median_30 = int(median_30)
-                        elif len(newcol_30) == 0:
-                            median_30 = 0
-                        else:
-                            median_30 = int(newcol_30[len(newcol_30) // 2])
-
-                        if len(newcol) > 0:
-                            f_average = round(f_average / len(newcol), 2)
-                        else:
-                            f_average = 0
-                        if len(newcol_30) > 0:
-                            average_30 = round(average_30 / len(newcol_30), 2)
-                        else:
-                            average_30 = 0
+                    if len(newcol) > 0:
+                        last = newcol[len(newcol) - 1]
+                        last_sold = '_{8} ' + str(last)
                     else:
+                        last_sold = ''
+
+                    newcol.sort()
+                    newcol_30.sort()
+
+                    if len(newcol) % 2 == 0 and len(newcol) != 0:
+                        lot1 = int(newcol[len(newcol) // 2])
+                        lot2 = int(newcol[len(newcol) // 2 - 1])
+                        median = round((lot1 + lot2) / 2, 2)
+                        if (median % int(median)) == 0:
+                            median = int(median)
+                    elif len(newcol) == 0:
                         median = 0
+                    else:
+                        median = int(newcol[len(newcol) // 2])
+
+                    if len(newcol_30) % 2 == 0 and len(newcol_30) != 0:
+                        lot1_30 = int(newcol_30[len(newcol_30) // 2])
+                        lot2_30 = int(newcol_30[len(newcol_30) // 2 - 1])
+                        median_30 = round((lot1_30 + lot2_30) / 2, 2)
+                        if (median_30 % int(median_30)) == 0:
+                            median_30 = int(median_30)
+                    elif len(newcol_30) == 0:
                         median_30 = 0
-                        lastsold = ''
+                    else:
+                        median_30 = int(newcol_30[len(newcol_30) // 2])
+
+                    if len(newcol) > 0:
+                        f_average = round(f_average / len(newcol), 2)
+                    else:
+                        f_average = 0
+                    if len(newcol_30) > 0:
+                        average_30 = round(average_30 / len(newcol_30), 2)
+                    else:
+                        average_30 = 0
 
                     if f_min == 1000:
                         f_min = 0
@@ -619,14 +578,14 @@ def messages():
                         '{5} ' + str(average_30) + '_' + \
                         '{6} ' + str(min_30) + '/' + str(max_30) + '_' + \
                         '{7} ' + str(un_average_30) + '/' + str(len(newcol_30) + un_average_30) + \
-                        str(lastsold) + '__'
+                        str(last_sold) + '__'
 
-                    if len(google) > i:
-                        if text != google[i]:
-                            updater(i, t_costs, text, const)
+                    if len(old_stats) > point:
+                        if text != old_stats[point]:
+                            updater(point, t_costs, text, const)
                     else:
-                        updater(i, t_costs, text, const)
-                    i += 1
+                        updater(point, t_costs, text, const)
+                    point += 1
                 printer('конец')
             else:
                 sleep(20)
@@ -665,7 +624,7 @@ def telepol():
 
 
 if __name__ == '__main__':
-    gain = [oldest]
+    gain = [oldest, detector, lot_updater, telegram, messages]
     for thread_element in gain:
         _thread.start_new_thread(thread_element, ())
     telepol()
