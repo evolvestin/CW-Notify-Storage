@@ -354,7 +354,7 @@ def detector():
             print_text = variable['destination'][server] + str(new)
             text = requests.get(print_text + '?embed=1')
             response = former(text.text)
-            if response['raw'] != 'False':
+            if response['raw'] != 'FalseRequests' and response['raw'] != 'False':
                 del response['raw']
                 au_id = secure_sql(db.get_au_id)
                 if response['au_id'] not in au_id:
