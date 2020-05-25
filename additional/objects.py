@@ -278,5 +278,6 @@ def thread_exec(logs=None):
 
 async def async_exec(logs=None):
     status = executive('async', logs)
+    print('спим', status['retry'], 'секунд')
     await asyncio.sleep(status['retry'])
     send_starting_function(status)
