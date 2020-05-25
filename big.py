@@ -254,7 +254,7 @@ def updater(pos, cost, stat, const):
 
 
 def former(text, form='new'):
-    soup = BeautifulSoup(text.text, 'html.parser')
+    soup = BeautifulSoup(text, 'html.parser')
     is_post_not_exist = soup.find('div', class_='tgme_widget_message_error')
     if is_post_not_exist is None:
         stamp_day_ago = int(datetime.now().timestamp()) - 24 * 60 * 60
@@ -280,7 +280,7 @@ def oldest():
             global old
             print_text = variable['destination'][server] + str(old)
             text = requests.get(print_text + '?embed=1')
-            response = former(text, 'old')
+            response = former(text.text, 'old')
             if response['raw'] == 'active':
                 print_text += ' Активен, ничего не делаю'
                 sleep(7)
@@ -350,7 +350,7 @@ def detector():
             db = SQLighter('old.db')
             print_text = variable['destination'][server] + str(new)
             text = requests.get(print_text + '?embed=1')
-            response = former(text)
+            response = former(text.text)
             if response['raw'] != 'False':
                 del response['raw']
                 au_id = secure_sql(db.get_au_id)
