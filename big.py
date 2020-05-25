@@ -474,7 +474,7 @@ def messages():
                     if len(qualities) > 1:
                         const.append(g + '/Common')
                     for q in qualities:
-                        if q != 'none':
+                        if q != 'None':
                             const.append(g + '/' + q)
                 while point < len(const):
                     text = ''
