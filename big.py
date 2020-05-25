@@ -271,6 +271,9 @@ def former(text, form='new'):
                 response = {'raw': 'active'}
     else:
         response = {'raw': 'False'}
+        search_error_requests = re.search('Channel with username .*? not found', is_post_not_exist.get_text())
+        if search_error_requests:
+            response['raw'] += 'Requests'
     return response
 
 
