@@ -443,7 +443,7 @@ def telegram():
 
                     au_id = secure_sql(db.get_active_au_id)
                     for i in array:
-                        if i != '':
+                        if i != '' and i != 'None':
                             if int(i) not in au_id:
                                 row = re.sub('/' + str(i) + '/', '/', row)
                     if row == '/':
@@ -456,7 +456,7 @@ def telegram():
 def messages():
     while True:
         try:
-            if first_open is None:
+            if first_open is False:
                 global worksheet_storage
                 point = 0
                 const = []
