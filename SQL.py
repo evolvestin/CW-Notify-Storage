@@ -20,8 +20,7 @@ class SQLighter:
 
     def create_lots(self, sql):
         with self.connection:
-            result = self.cursor.execute(sql)
-            print('блять', result)
+            self.cursor.execute(sql)
 
     def update_lot(self, lot):
         with self.connection:
@@ -45,7 +44,6 @@ class SQLighter:
             for i in result:
                 result_array.append(i)
             return result_array
-
 
     def get_quality(self, name):
         with self.connection:
