@@ -403,7 +403,8 @@ def lot_updater():
                         update_array.append(k)
                 for k in sql_request_array:
                     secure_sql(db.update_lot, k)
-                printer('Обновлено лотов в базе ' + str(len(sql_request_array)))
+                if len(sql_request_array) > 0:
+                    printer('Обновлено лотов в базе ' + str(len(sql_request_array)))
                 if limiter <= 0:
                     delay = 60 - (int(datetime.now().timestamp()) - last_requested)
                     printer('Ухожу в сон на ' + str(delay) + ' секунд')
