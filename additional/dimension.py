@@ -1,6 +1,6 @@
 import os
 response_dictionary = {}
-server = os.environ['server']
+server = 'cw3' # os.environ['server']
 absolute_emails = ['larik.live@gmail.com', 'weeueks3@gmail.com', 'xstorage1@storage-216513.iam.gserviceaccount.com']
 res = {'form': {}, 'emails': {}, 'TOKEN': {}, 'document': {}, 'json_old': {}, 'json_storage': {},
        'destination': {}, 'zone': {}, 'lots_post_id': {}}
@@ -42,8 +42,8 @@ res['emails']['cw3'] = [*absolute_emails,
 res['TOKEN']['cw2'] = '530805773:AAFE-VDtmvxtCfJAzsTMTNBT74VWxDFguj4'
 res['TOKEN']['cw3'] = '468445195:AAHKJxXQRxg5kJau_KT4smoCvJfnqcgOS4c'
 
-res['destination']['cw2'] = 'https://t.me/ChatWarsAuction/'
-res['destination']['cw3'] = 'https://t.me/chatwars3/'
+res['channel']['cw2'] = 'https://t.me/ChatWarsAuction/'
+res['channel']['cw3'] = 'https://t.me/chatwars3/'
 
 res['json_storage']['cw2'] = 'eustorage2.json'
 res['json_storage']['cw3'] = 'bigdata2.json'
@@ -51,14 +51,14 @@ res['json_storage']['cw3'] = 'bigdata2.json'
 res['json_old']['cw2'] = 'eustorage1.json'
 res['json_old']['cw3'] = 'bigdata1.json'
 
-res['document']['cw2'] = 'eu_storage'
-res['document']['cw3'] = 'ru_storage'
+res['storage']['cw2'] = 'eu_storage'
+res['storage']['cw3'] = 'ru_storage'
 
-res['lots_post_id']['cw2'] = 9
-res['lots_post_id']['cw3'] = 10
+res['Notify']['cw2'] = 'EU-storage'
+res['Notify']['cw3'] = 'RU-storage'
 
-res['zone']['cw2'] = 'EU-'
-res['zone']['cw3'] = 'RU-'
+res['lot_updater']['cw2'] = 9
+res['lot_updater']['cw3'] = 10
 
 
 def bot_dimension():
