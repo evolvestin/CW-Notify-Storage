@@ -1,6 +1,6 @@
 import os
 response_dictionary = {}
-server = 'cw3' # os.environ['server']
+server = os.environ['server']
 absolute_emails = ['larik.live@gmail.com', 'weeueks3@gmail.com', 'xstorage1@storage-216513.iam.gserviceaccount.com']
 res = {'form': {}, 'emails': {}, 'TOKEN': {}, 'channel': {}, 'json_storage': {}, 'json_old': {},
        'storage': {}, 'Notify': {}, 'lot_updater': {}}
