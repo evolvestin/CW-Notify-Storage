@@ -143,7 +143,7 @@ def database_filler():
     double_raw = db.get_double()
     if double_raw:
         for i in double_raw:
-            lot_header = str(i[0]) + '/' + variable['lot'][server] + str(i[1])
+            lot_header = str(i[0]) + ' ' + str(i[1])
             if lot_header not in double:
                 double.append(lot_header)
     for lot_header in double:
@@ -159,7 +159,7 @@ if start_search:
     s_message = edit_dev_message(s_message, '\n' + log_time(tag=code))
 else:
     additional_text = '\nНет подключения к ' + lot_updater_channel + bold('Бот выключен')
-    s_message = start_message(variable['file'][server], stamp1, additional_text)
+    s_message = start_message(variable['document'][server], stamp1, additional_text)
     _thread.exit()
 bot = start_main_bot('non-async', variable['TOKEN'][server])
 new = copy.copy(old + 1)
@@ -499,7 +499,7 @@ def messages():
                         status = z[11]
                         if status != 'Cancelled':
                             if quality == split[1] or split[1] == 'none' or \
-                                    (split[1] == 'Common' and quality == 'none'):
+                                    (split[1] == 'Common' and quality == 'None'):
                                 if buyer != 'None':
                                     if stamp >= time_30:
                                         newcol_30.append(cost)
