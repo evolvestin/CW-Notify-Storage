@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 game_month = {'Wintar': 1, 'Hornung': 2, 'Lenzin': 3, 'Ōstar': 4, 'Winni': 5, 'Brāh': 6,
               'Hewi': 7, 'Aran': 8, 'Witu': 9, 'Wīndume': 10, 'Herbist': 11, 'Hailag': 12}
-server_name = 'cw3'  # os.environ['server']
+server_name = os.environ['server']
 server = {'cw2': 1, 'cw3': 2}
 
 
