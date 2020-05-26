@@ -428,7 +428,6 @@ def telegram():
                 sleep(10)
             else:
                 sleep(20)
-                printer('начало')
                 lots_raw = query(lot_updater_channel + str(variable['lot_updater']), '(.*)')
                 if lots_raw:
                     array = lots_raw.group(1).split('/')
