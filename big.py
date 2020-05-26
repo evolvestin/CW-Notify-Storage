@@ -172,12 +172,15 @@ def last_time_request():
     last_requested = int(datetime.now().timestamp())
 
 
-def editor(text, print_text):
+def telegram_editor(text, print_text):
     try:
-        bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
+        message = bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
+        response = message.text.split('/')
     except IndexError and Exception:
         print_text += ' (пост не изменился)'
+        response = text.split('/')
     printer(print_text)
+    return response
 
 
 def google(action, option=None):
@@ -439,19 +442,12 @@ def telegram():
                         if str(i) not in array:
                             if len(row) < 4085:
                                 row += str(i) + '/'
-                    if row == '/':
-                        row = 'None'
-
-                    editor(row, 'добавил новые лоты в telegram')
-
-                    au_id = secure_sql(db.get_active_au_id)
+                    array = telegram_editor(row, 'добавил новые лоты в telegram')
                     for i in array:
-                        if i != '' and i != 'None':
+                        if i != '':
                             if int(i) not in au_id:
                                 row = re.sub('/' + str(i) + '/', '/', row)
-                    if row == '/':
-                        row = 'None'
-                    editor(row, 'удалил закончившиеся из google')
+                    telegram_editor(row, 'удалил закончившиеся из google')
         except IndexError and Exception:
             executive()
 
