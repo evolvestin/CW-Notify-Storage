@@ -5,13 +5,13 @@ import _thread
 import gspread
 import requests
 import datetime
-import dimensional
 from time import sleep
 import concurrent.futures
 from SQL import SQLighter
 from bs4 import BeautifulSoup
 from datetime import datetime
 from additional.game_time import timer
+from additional.dimension import bot_dimension
 from requests_futures.sessions import FuturesSession
 from additional.objects import thread_exec as executive
 from oauth2client.service_account import ServiceAccountCredentials
@@ -19,8 +19,6 @@ from additional.objects import code, bold, query, italic, printer, stamper, log_
     start_message, start_main_bot, properties_json, send_dev_message, edit_dev_message
 
 stamp1 = int(datetime.now().timestamp())
-server = dimensional.server
-variable = dimensional.res
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 start_sql_request = 'INSERT INTO old (au_id, lot_id, enchant, item_name, quality, ' \
                     'condition, modifiers, seller, cost, buyer, stamp, status) VALUES '
@@ -29,6 +27,7 @@ start_sql_update = 'INSERT INTO old (au_id, lot_id, enchant, item_name, quality,
 properties_title_list = ['lot_id', 'enchant', 'item_name', 'quality', 'condition',
                          'modifiers', 'seller', 'cost', 'buyer', 'stamp', 'status', 'raw']
 lot_updater_channel = 'https://t.me/lot_updater/'
+variable = bot_dimension()
 first_open = True
 update_array = []
 idMe = 396978030
@@ -53,8 +52,8 @@ def form_mash(lot):
         else:
             lot_properties[i] = 'None'
     for g in lot_split:
-        for i in variable['form'][server]:
-            search = re.search(variable['form'][server].get(i), g)
+        for i in variable['form']:
+            search = re.search(variable['form'].get(i), g)
             if search:
                 if i == 'title':
                     item_name = re.sub(' \+\d+[⚔🛡]', '', search.group(2))
@@ -101,12 +100,12 @@ def database_filler():
     global client1
     global worksheet
     db = SQLighter('old.db')
-    creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+    creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
     client1 = gspread.authorize(creds1)
     spreadsheet_list = client1.list_spreadsheet_files()
     for s in spreadsheet_list:
         document_name = s['name']
-        if document_name == variable['document'][server] or document_name == 'temp-' + variable['document'][server]:
+        if document_name == variable['storage'] or document_name == 'temp-' + variable['storage']:
             document = client1.open(document_name)
             for w in document.worksheets():
                 worksheet = document.worksheet(w.title)
@@ -134,7 +133,7 @@ def database_filler():
                             point = 0
                     else:
                         error = document_name + '/' + w.title + '/' + str(position) + ' пуст или неисправен'
-                        send_dev_message(variable['document'][server], error)
+                        send_dev_message(variable['storage'], error)
                 if sql_request_line != '':
                     sql_request_line = sql_request_line.rstrip()
                     sql_request_line = sql_request_line[:-1] + ';'
@@ -147,21 +146,21 @@ def database_filler():
             if lot_header not in double:
                 double.append(lot_header)
     for lot_header in double:
-        send_dev_message(variable['document'][server], 'Повторяющийся в базе элемент: ' + bold(lot_header))
-    worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
+        send_dev_message(variable['storage'], 'Повторяющийся в базе элемент: ' + bold(lot_header))
+    worksheet = client1.open('temp-' + variable['storage']).worksheet('old')
     old_values = worksheet.col_values(1)
 
 
-start_search = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
+start_search = query(lot_updater_channel + str(variable['lot_updater']), '(.*)')
 if start_search:
-    s_message = start_message(variable['document'][server], stamp1)
+    s_message = start_message(variable['storage'], stamp1)
     database_filler()
     s_message = edit_dev_message(s_message, '\n' + log_time(tag=code))
 else:
     additional_text = '\nНет подключения к ' + lot_updater_channel + bold('Бот выключен')
-    s_message = start_message(variable['document'][server], stamp1, additional_text)
+    s_message = start_message(variable['storage'], stamp1, additional_text)
     _thread.exit()
-bot = start_main_bot('non-async', variable['TOKEN'][server])
+bot = start_main_bot('non-async', variable['TOKEN'])
 new = copy.copy(old + 1)
 old += 1
 # ====================================================================================
@@ -174,7 +173,7 @@ def last_time_request():
 
 def telegram_editor(text, print_text):
     try:
-        message = bot.edit_message_text(code(text), -1001376067490, variable['lots_post_id'][server], parse_mode='HTML')
+        message = bot.edit_message_text(code(text), -1001376067490, variable['lot_updater'], parse_mode='HTML')
         response = message.text.split('/')
     except IndexError and Exception:
         print_text += ' (пост не изменился)'
@@ -196,9 +195,9 @@ def google(action, option=None):
             if search_exceed:
                 sleep(60)
                 worksheet_number = 0
-                storage_name = variable['document'][server]
+                storage_name = variable['storage']
                 dev = send_dev_message('temp-' + storage_name, 'Устраняем таблицу', tag=italic, good=True)
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
                 client1 = gspread.authorize(creds1)
                 temp_document = client1.open('temp-' + storage_name)
                 temp_worksheet = temp_document.worksheet('old')
@@ -216,7 +215,7 @@ def google(action, option=None):
                     cell_list[g].value = values[g]
                 worksheet.update_cells(cell_list)
                 document = client1.create('temp-' + storage_name)
-                for i in variable['emails'][server]:
+                for i in variable['emails']:
                     document.share(i, 'user', 'writer', False)
                 worksheet = document.add_worksheet(title='old', rows=limit, cols=1)
                 worksheet.format('A1:A' + str(limit), {'horizontalAlignment': 'CENTER'})
@@ -228,9 +227,9 @@ def google(action, option=None):
                 old_values = []
                 sleep(30)
             else:
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'][server], scope)
+                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
                 client1 = gspread.authorize(creds1)
-                worksheet = client1.open('temp-' + variable['document'][server]).worksheet('old')
+                worksheet = client1.open('temp-' + variable['storage']).worksheet('old')
                 worksheet.update_cell(len(old_values) + 1, 1, option)
 
 
@@ -244,9 +243,9 @@ def updater(pos, cost, stat, const):
         cell_list[2].value = stat
         worksheet_storage.update_cells(cell_list)
     except IndexError and Exception:
-        creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
+        creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'], scope)
         client2 = gspread.authorize(creds2)
-        worksheet_storage = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
+        worksheet_storage = client2.open('Notify').worksheet(variable['Notify'])
         cell_list = worksheet_storage.range('A' + row + ':C' + row)
         cell_list[0].value = const[pos]
         cell_list[1].value = cost
@@ -284,7 +283,7 @@ def oldest():
     while True:
         try:
             global old
-            print_text = variable['destination'][server] + str(old)
+            print_text = variable['channel'] + str(old)
             text = requests.get(print_text + '?embed=1')
             response = former(text.text, 'old')
             if response['raw'] == 'active':
@@ -321,7 +320,7 @@ def detector():
                     if len(request_array) == 0:
                         request_array = range(new, new + limiter)
                     for k in request_array:
-                        url = variable['destination'][server] + str(k) + '?embed=1'
+                        url = variable['channel'] + str(k) + '?embed=1'
                         futures.append(session.get(url))
                         au_id_array.append(k)
                         limiter -= 1
@@ -354,7 +353,7 @@ def detector():
                         limiter = 300
                         sleep(delay)
             db = SQLighter('old.db')
-            print_text = variable['destination'][server] + str(new)
+            print_text = variable['channel'] + str(new)
             text = requests.get(print_text + '?embed=1')
             response = former(text.text)
             if response['raw'] != 'FalseRequests' and response['raw'] != 'False':
@@ -391,7 +390,7 @@ def lot_updater():
                 if len(update_array) == 0:
                     update_array = secure_sql(db.get_active_au_id)
                 for k in update_array:
-                    url = variable['destination'][server] + str(k) + '?embed=1'
+                    url = variable['channel'] + str(k) + '?embed=1'
                     futures.append(session.get(url))
                     au_id_array.append(k)
                     limiter -= 1
@@ -430,7 +429,7 @@ def telegram():
             else:
                 sleep(20)
                 printer('начало')
-                lots_raw = query(lot_updater_channel + str(variable['lots_post_id'][server]), '(.*)')
+                lots_raw = query(lot_updater_channel + str(variable['lot_updater']), '(.*)')
                 if lots_raw:
                     array = lots_raw.group(1).split('/')
                     row = '/'
@@ -461,10 +460,10 @@ def messages():
                 const = []
                 printer('начало')
                 db = SQLighter('old.db')
-                creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'][server], scope)
+                creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'], scope)
                 client2 = gspread.authorize(creds2)
                 const_pre = client2.open('Notify').worksheet('const_items').col_values(2)
-                worksheet_storage = client2.open('Notify').worksheet(variable['zone'][server] + 'storage')
+                worksheet_storage = client2.open('Notify').worksheet(variable['Notify'])
                 old_stats = worksheet_storage.col_values(3)
                 sleep(2)
                 for g in const_pre:
