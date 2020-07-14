@@ -461,7 +461,7 @@ def messages():
                 db = SQLighter('old.db')
                 creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'], scope)
                 client2 = gspread.authorize(creds2)
-                const_pre = client2.open('Notify').worksheet('items').col_values(2)
+                const_pre = client2.open('Notify').worksheet('items').col_values(1)
                 worksheet_storage = client2.open('Notify').worksheet(variable['Notify'])
                 old_stats = worksheet_storage.col_values(3)
                 sleep(2)
