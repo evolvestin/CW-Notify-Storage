@@ -157,7 +157,7 @@ if start_search:
     database_filler()
     s_message = edit_dev_message(s_message, '\n' + log_time(tag=code))
 else:
-    additional_text = '\nНет подключения к ' + lot_updater_channel + bold('Бот выключен')
+    additional_text = '\nНет подключения к ' + lot_updater_channel + ' ' + bold('Бот выключен')
     s_message = start_message(variable['storage'], stamp1, additional_text)
     _thread.exit()
 bot = start_main_bot('non-async', variable['TOKEN'])
@@ -461,7 +461,7 @@ def messages():
                 db = SQLighter('old.db')
                 creds2 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_storage'], scope)
                 client2 = gspread.authorize(creds2)
-                const_pre = client2.open('Notify').worksheet('const_items').col_values(2)
+                const_pre = client2.open('Notify').worksheet('items').col_values(2)
                 worksheet_storage = client2.open('Notify').worksheet(variable['Notify'])
                 old_stats = worksheet_storage.col_values(3)
                 sleep(2)
