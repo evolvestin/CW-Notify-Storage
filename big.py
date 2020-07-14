@@ -466,7 +466,7 @@ def messages():
                 old_stats = worksheet_storage.col_values(3)
                 sleep(2)
                 for g in const_pre:
-                    const.append(g + '/none')
+                    const.append(g + '/None')
                     qualities = secure_sql(db.get_quality, g)
                     if len(qualities) > 1:
                         const.append(g + '/Common')
@@ -496,7 +496,7 @@ def messages():
                         stamp = z[10]
                         status = z[11]
                         if status != 'Cancelled':
-                            if quality == split[1] or split[1] == 'none' or \
+                            if quality == split[1] or split[1] == 'None' or \
                                     (split[1] == 'Common' and quality == 'None'):
                                 if buyer != 'None':
                                     if stamp >= time_30:
