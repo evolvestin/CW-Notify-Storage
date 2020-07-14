@@ -1,6 +1,6 @@
 import os
 response_dictionary = {}
-server = 'cw3' # os.environ['server']
+server = os.environ['server']
 absolute_emails = ['larik.live@gmail.com', 'weeueks3@gmail.com', 'xstorage1@storage-216513.iam.gserviceaccount.com']
 res = {'form': {}, 'emails': {}, 'TOKEN': {}, 'channel': {}, 'json_storage': {}, 'json_old': {},
        'storage': {}, 'Notify': {}, 'lot_updater': {}}
@@ -57,8 +57,8 @@ res['storage']['cw3'] = 'ru_storage'
 res['Notify']['cw2'] = 'eu_storage'
 res['Notify']['cw3'] = 'ru_storage'
 
-res['lot_updater']['cw2'] = 9
-res['lot_updater']['cw3'] = 10
+res['lot_updater']['cw2'] = 30
+res['lot_updater']['cw3'] = 31
 
 
 def bot_dimension():
