@@ -15,8 +15,8 @@ from additional.dimension import bot_dimension
 from requests_futures.sessions import FuturesSession
 from additional.objects import thread_exec as executive
 from oauth2client.service_account import ServiceAccountCredentials
-from additional.objects import code, bold, query, italic, printer, stamper, log_time, secure_sql, \
-    start_message, start_main_bot, properties_json, send_dev_message, edit_dev_message
+from additional.objects import code, bold, query, printer, stamper, log_time, secure_sql, \
+    start_message, start_main_bot, send_dev_message, edit_dev_message
 
 stamp1 = int(datetime.now().timestamp())
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -31,7 +31,6 @@ variable = bot_dimension()
 first_open = True
 update_array = []
 idMe = 396978030
-old_values = []
 limit = 50000
 limiter = 300
 old = 1
@@ -95,10 +94,8 @@ def form_mash(lot):
 
 def database_filler():
     global old
-    global old_values
     global creds1
     global client1
-    global worksheet
     db = SQLighter('old.db')
     creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
     client1 = gspread.authorize(creds1)
@@ -113,8 +110,6 @@ def database_filler():
                 sql_request_line = ''
                 position = 0
                 point = 0
-                if w.title == 'old':
-                    old_values = values
                 for g in values:
                     position += 1
                     lot_object = form_mash(g)
@@ -147,8 +142,6 @@ def database_filler():
                 double.append(lot_header)
     for lot_header in double:
         send_dev_message(variable['storage'], 'Повторяющийся в базе элемент: ' + bold(lot_header))
-    worksheet = client1.open('temp-' + variable['storage']).worksheet('old')
-    old_values = worksheet.col_values(1)
 
 
 start_search = query(lot_updater_channel + str(variable['lot_updater']), '(.*)')
@@ -180,57 +173,6 @@ def telegram_editor(text, print_text):
         response = text.split('/')
     printer(print_text)
     return response
-
-
-def google(action, option=None):
-    global creds1
-    global client1
-    global worksheet
-    global old_values
-    if action == 'old_insert':
-        try:
-            worksheet.update_cell(len(old_values) + 1, 1, option)
-        except IndexError and Exception as error:
-            search_exceed = re.search('exceeds grid limits', str(error))
-            if search_exceed:
-                sleep(60)
-                worksheet_number = 0
-                storage_name = variable['storage']
-                dev = send_dev_message('temp-' + storage_name, 'Устраняем таблицу', tag=italic, good=True)
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
-                client1 = gspread.authorize(creds1)
-                temp_document = client1.open('temp-' + storage_name)
-                temp_worksheet = temp_document.worksheet('old')
-                values = temp_worksheet.col_values(1)
-                document = client1.open(storage_name)
-                for i in document.worksheets():
-                    if int(i.title) > worksheet_number:
-                        worksheet_number = int(i.title)
-                worksheet = document.add_worksheet(str(worksheet_number + 1), limit, 1)
-                worksheet.format('A1:A' + str(limit), {'horizontalAlignment': 'CENTER'})
-                document.batch_update(properties_json(worksheet.id))
-                cell_list = worksheet.range('A1:A' + str(limit))
-                dev = edit_dev_message(dev, italic('\n— Новая: ' + storage_name + '/' + str(worksheet_number + 1)))
-                for g in range(0, len(values)):
-                    cell_list[g].value = values[g]
-                worksheet.update_cells(cell_list)
-                document = client1.create('temp-' + storage_name)
-                for i in variable['emails']:
-                    document.share(i, 'user', 'writer', False)
-                worksheet = document.add_worksheet(title='old', rows=limit, cols=1)
-                worksheet.format('A1:A' + str(limit), {'horizontalAlignment': 'CENTER'})
-                document.batch_update(properties_json(worksheet.id))
-                document.del_worksheet(document.worksheet('Sheet1'))
-                client1.del_spreadsheet(temp_document.id)
-                worksheet.update_cell(1, 1, option)
-                edit_dev_message(dev, italic('\n— Успешно'))
-                old_values = []
-                sleep(30)
-            else:
-                creds1 = ServiceAccountCredentials.from_json_keyfile_name(variable['json_old'], scope)
-                client1 = gspread.authorize(creds1)
-                worksheet = client1.open('temp-' + variable['storage']).worksheet('old')
-                worksheet.update_cell(len(old_values) + 1, 1, option)
 
 
 def updater(pos, cost, stat, const):
@@ -277,30 +219,6 @@ def former(text, form='new'):
         if search_error_requests:
             response['raw'] += 'Requests'
     return response
-
-
-def oldest():
-    while True:
-        try:
-            global old
-            print_text = variable['channel'] + str(old)
-            text = requests.get(print_text + '?embed=1')
-            response = former(text.text, 'old')
-            if response['raw'] == 'active':
-                print_text += ' Активен, ничего не делаю'
-                sleep(7)
-            elif response['raw'].startswith('False'):
-                print_text += ' Форму не нашло'
-                sleep(10)
-            else:
-                old = old + 1
-                google('old_insert', response['raw'])
-                old_values.append(response['raw'])
-                sleep(1)
-                print_text += ' Добавил в google старый лот'
-            printer(print_text)
-        except IndexError and Exception:
-            executive()
 
 
 def detector():
@@ -622,7 +540,7 @@ def telepol():
 
 
 if __name__ == '__main__':
-    gain = [oldest, detector, lot_updater, telegram, messages]
+    gain = [detector, lot_updater, telegram, messages]
     for thread_element in gain:
         _thread.start_new_thread(thread_element, ())
     telepol()
