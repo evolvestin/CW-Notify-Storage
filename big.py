@@ -436,24 +436,27 @@ def messages():
 
 @dispatcher.message_handler()
 async def repeat_all_messages(message: types.Message):
-    if message['chat']['id'] != idMe:
-        await bot.send_message(message['chat']['id'], 'К тебе этот бот не имеет отношения, уйди пожалуйста')
-    else:
-        if message['text'].lower().startswith('/log'):
-            modified = re.sub('/log_', '', message['text'].lower())
-            if modified.startswith('s'):
-                doc = codecs.open(path['storage'], 'r', 'utf-8')
-            elif modified.startswith('a'):
-                doc = open(path['active'], 'rb')
-            else:
-                doc = open('log.txt', 'rt')
-            await bot.send_document(idMe, doc)
-        elif message['text'].lower().startswith('/lots'):
-            size = str(round(os.path.getsize(path['lots']) / (1024 * 1024), 2))
-            text_size = 'Размер (' + path['lots'] + '):' + size + ' MB'
-            await bot.send_message(message['chat']['id'], text_size)
+    try:
+        if message['chat']['id'] != idMe:
+            await bot.send_message(message['chat']['id'], 'К тебе этот бот не имеет отношения, уйди пожалуйста')
         else:
-            await bot.send_message(message['chat']['id'], 'Я работаю', reply_markup=None)
+            if message['text'].lower().startswith('/log'):
+                modified = re.sub('/log_', '', message['text'].lower())
+                if modified.startswith('s'):
+                    doc = open(path['storage'], 'rb')
+                elif modified.startswith('a'):
+                    doc = open(path['active'], 'rb')
+                else:
+                    doc = open('log.txt', 'rt')
+                await bot.send_document(idMe, doc)
+            elif message['text'].lower().startswith('/lots'):
+                size = round(os.path.getsize(path['lots']) / (1024 * 1024), 2)
+                text_size = 'Размер (' + code(path['lots']) + '): ' + bold(size) + ' MB'
+                await bot.send_message(message['chat']['id'], text_size)
+            else:
+                await bot.send_message(message['chat']['id'], 'Я работаю', reply_markup=None)
+    except IndexError and Exception:
+        await executive(str(message))
 
 
 if __name__ == '__main__':
