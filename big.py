@@ -103,10 +103,8 @@ def starting_server_creation():
                 value = resource[options.index(option)]
                 if option == 'DATA_TOKEN':
                     server['TOKEN'] = value
-                elif option in 'castle_list':
+                elif option in ['castle_list', 'storage']:
                     server[option] = value
-                elif option == 'storage_sheet':
-                    server['storage'] = resource[options.index(option)]
                 elif option == 'form':
                     server[option] = literal_eval(re.sub('️', '', value))
                 elif option == 'channel':
@@ -389,15 +387,15 @@ def messages():
                                 cancelled_count_full += 1
                                 if lot['stamp'] >= time_week:
                                     cancelled_count_week += 1
-                        text = '__' + bold('{1} ') + str(len(costs_list_full)) + '__'
-                        for title in ['{2}', '{3}']:
+                        text = '__' + bold('{0} ') + str(len(costs_list_full)) + '__'
+                        for title in ['{1}', '{2}']:
                             text += bold(title) + '_'
                             median = 0
                             minimum = 0
                             maximum = 0
                             average = 0
                             last_sold = ''
-                            if title == '{2}':
+                            if title == '{1}':
                                 costs_list = costs_list_full
                                 unsold_count = unsold_count_full
                                 cancelled_count = cancelled_count_full
@@ -412,16 +410,16 @@ def messages():
                                 median = median_function(costs_list)
                                 average = round(mean(costs_list), 2)
                                 median = int(median) if float(median).is_integer() else median
-                                if title == '{3}':
+                                if title == '{2}':
                                     pattern, median_text = '/\d+', '/' + str(median)
                                     last_sold = '_{8} ' + str(costs_list[-1])
                                 else:
                                     pattern, median_text = '\d+/', str(median) + '/'
                                 const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
-                            text += '{4} ' + str(median) + '_' + \
-                                '{5} ' + str(average) + '_' + \
-                                '{6} ' + str(minimum) + '/' + str(maximum) + '_' + \
-                                'Cancelled: ' + str(cancelled_count) + '_' + \
+                            text += '{3} ' + str(median) + '_' + \
+                                '{4} ' + str(average) + '_' + \
+                                '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
+                                '{6} ' + str(cancelled_count) + '_' + \
                                 '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
                                 last_sold + '__'
                         const[base][quality]['stats'] = text
