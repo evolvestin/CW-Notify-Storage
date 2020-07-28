@@ -62,6 +62,8 @@ def create_server_json_list():
     _server_id = 'cw2'
     if os.environ.get('server'):
         _server_id = os.environ['server']
+    if not os.path.exists('stats'):
+        os.makedirs('stats')
     json_folder_name = 'server_json_' + re.sub('[^\d]', '', _server_id)
     for file_name in os.listdir(json_folder_name):
         search_json = re.search('(\d)\.json', file_name)
@@ -349,9 +351,7 @@ def messages():
     while True:
         if storage_start is False:
             try:
-                sleep(10)
                 const = {}
-                stats = {}
                 printer('начало')
                 qualities = ['None']
                 db = SQLighter(path['lots'])
@@ -361,91 +361,84 @@ def messages():
                 temp_base = {re.sub('️', '', item[0]): item[1] for item in const_items}
                 const_reversed_base = {value: key for key, value in temp_base.items()}
                 time_week = time_now() - (7 * 24 * 60 * 60)
+                lots = secure_sql(db.get_not_actives)
                 const_base = copy(temp_base)
                 for base in const_reversed_base:
+                    stats = {}
                     const[base] = {}
-                    stats[base] = {}
                     for quality in qualities:
-                        stats[base][quality] = {'costs_list_full': [], 'costs_list_week': [],
-                                                'unsold_count_full': 0, 'unsold_count_week': 0,
-                                                'cancelled_count_full': 0, 'cancelled_count_week': 0}
+                        stats[quality] = {'costs_list_full': [], 'costs_list_week': [],
+                                          'unsold_count_full': 0, 'unsold_count_week': 0,
+                                          'cancelled_count_full': 0, 'cancelled_count_week': 0}
+                    for lot in lots:
+                        if lot['base'] == base and lot['quality']:
+                            for quality in qualities:
+                                if lot['quality'] == quality or quality == 'None' or \
+                                        (quality == 'Common' and lot['quality'] == 'None'):
+                                    if lot['status'] != 'Cancelled':
+                                        if lot['b_castle'] != 'None':
+                                            stats[quality]['costs_list_full'].append(lot['cost'])
+                                            if lot['stamp'] >= time_week:
+                                                stats[quality]['costs_list_week'].append(lot['cost'])
+                                        else:
+                                            stats[quality]['unsold_count_full'] += 1
+                                            if lot['stamp'] >= time_week:
+                                                stats[quality]['unsold_count_week'] += 1
+                                    else:
+                                        stats[quality]['cancelled_count_full'] += 1
+                                        if lot['stamp'] >= time_week:
+                                            stats[quality]['cancelled_count_week'] += 1
 
-                lots = secure_sql(db.get_not_actives)
-                for lot in lots:
-                    if lot['base'] != 'None' and lot['quality']:
-                        qualities = ['None']
-                        if lot['quality'] != 'None':
-                            qualities.insert(0, lot['quality'])
-                        else:
-                            qualities.insert(0, 'Common')
+                    for quality in list(stats):
+                        if quality != 'None' and stats[quality] == clear_stats:
+                            del stats[quality]
 
-                        for quality in qualities:
-                            if lot['status'] != 'Cancelled':
-                                if lot['b_castle'] != 'None':
-                                    stats[lot['base']][quality]['costs_list_full'].append(lot['cost'])
-                                    if lot['stamp'] >= time_week:
-                                        stats[lot['base']][quality]['costs_list_week'].append(lot['cost'])
+                    if len(stats) == 2:
+                        if stats.get('None') and stats.get('Common'):
+                            if stats['None'] == stats['Common']:
+                                del stats['Common']
+
+                    for quality in qualities:
+                        if stats.get(quality):
+                            const[base][quality] = {'cost': '0/0', 'stats': ''}
+                            costs_list_full = stats[quality]['costs_list_full']
+                            text = '__' + bold('{0} ') + str(len(costs_list_full)) + '__'
+                            for title in ['{1}', '{2}']:
+                                text += bold(title) + '_'
+                                median = 0
+                                minimum = 0
+                                maximum = 0
+                                average = 0
+                                last_sold = ''
+                                if title == '{1}':
+                                    costs_list = costs_list_full
+                                    unsold_count = stats[quality]['unsold_count_full']
+                                    cancelled_count = stats[quality]['cancelled_count_full']
                                 else:
-                                    stats[lot['base']][quality]['unsold_count_full'] += 1
-                                    if lot['stamp'] >= time_week:
-                                        stats[lot['base']][quality]['unsold_count_week'] += 1
-                            else:
-                                stats[lot['base']][quality]['cancelled_count_full'] += 1
-                                if lot['stamp'] >= time_week:
-                                    stats[lot['base']][quality]['cancelled_count_week'] += 1
-                for base in stats:
-                    for quality in list(stats[base]):
-                        if quality != 'None' and stats[base][quality] == clear_stats:
-                            del stats[base][quality]
+                                    costs_list = stats[quality]['costs_list_week']
+                                    unsold_count = stats[quality]['unsold_count_week']
+                                    cancelled_count = stats[quality]['cancelled_count_week']
+                                if len(costs_list) > 0:
+                                    minimum = min(costs_list)
+                                    maximum = max(costs_list)
+                                    cost = const[base][quality]['cost']
+                                    median = median_function(costs_list)
+                                    average = round(mean(costs_list), 2)
+                                    median = int(median) if float(median).is_integer() else median
+                                    if title == '{2}':
+                                        pattern, median_text = '/\d+', '/' + str(median)
+                                        last_sold = '_{8} ' + str(costs_list[-1])
+                                    else:
+                                        pattern, median_text = '\d+/', str(median) + '/'
+                                    const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
+                                text += '{3} ' + str(median) + '_' + \
+                                    '{4} ' + str(average) + '_' + \
+                                    '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
+                                    '{6} ' + str(cancelled_count) + '_' + \
+                                    '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
+                                    last_sold + '__'
+                            const[base][quality]['stats'] = text
 
-                for base in stats:
-                    if len(stats[base]) == 2:
-                        qualities = []
-                        for quality in stats[base]:
-                            qualities.append(quality)
-                        if stats[base][qualities[0]] == stats[base][qualities[1]]:
-                            del stats[base][qualities[1]]
-
-                for base in stats:
-                    for quality in stats[base]:
-                        const[base][quality] = {'cost': '0/0', 'stats': ''}
-                        costs_list_full = stats[base][quality]['costs_list_full']
-                        text = '__' + bold('{0} ') + str(len(costs_list_full)) + '__'
-                        for title in ['{1}', '{2}']:
-                            text += bold(title) + '_'
-                            median = 0
-                            minimum = 0
-                            maximum = 0
-                            average = 0
-                            last_sold = ''
-                            if title == '{1}':
-                                costs_list = costs_list_full
-                                unsold_count = stats[base][quality]['unsold_count_full']
-                                cancelled_count = stats[base][quality]['cancelled_count_full']
-                            else:
-                                costs_list = stats[base][quality]['costs_list_week']
-                                unsold_count = stats[base][quality]['unsold_count_week']
-                                cancelled_count = stats[base][quality]['cancelled_count_week']
-                            if len(costs_list) > 0:
-                                minimum = min(costs_list)
-                                maximum = max(costs_list)
-                                cost = const[base][quality]['cost']
-                                median = median_function(costs_list)
-                                average = round(mean(costs_list), 2)
-                                median = int(median) if float(median).is_integer() else median
-                                if title == '{2}':
-                                    pattern, median_text = '/\d+', '/' + str(median)
-                                    last_sold = '_{8} ' + str(costs_list[-1])
-                                else:
-                                    pattern, median_text = '\d+/', str(median) + '/'
-                                const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
-                            text += '{3} ' + str(median) + '_' + \
-                                '{4} ' + str(average) + '_' + \
-                                '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
-                                '{6} ' + str(cancelled_count) + '_' + \
-                                '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
-                                last_sold + '__'
-                        const[base][quality]['stats'] = text
                 with codecs.open('storage.json', 'w', 'utf-8') as doc:
                     for base in const_reversed_base:
                         const[const_reversed_base[base]] = const.pop(base)
