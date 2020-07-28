@@ -62,8 +62,6 @@ def create_server_json_list():
     _server_id = 'cw2'
     if os.environ.get('server'):
         _server_id = os.environ['server']
-    if not os.path.exists('stats'):
-        os.makedirs('stats')
     json_folder_name = 'server_json_' + re.sub('[^\d]', '', _server_id)
     for file_name in os.listdir(json_folder_name):
         search_json = re.search('(\d)\.json', file_name)
