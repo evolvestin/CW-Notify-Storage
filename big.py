@@ -27,6 +27,9 @@ const_base = {}
 idMe = 396978030
 global_limit = 300
 storage_start = True
+clear_stats = {'costs_list_full': [], 'costs_list_week': [],
+               'unsold_count_full': 0, 'unsold_count_week': 0,
+               'cancelled_count_full': 0, 'cancelled_count_week': 0}
 # ====================================================================================
 
 
@@ -56,7 +59,7 @@ def starting_const_creation():
 
 def create_server_json_list():
     global server
-    _server_id = 'cw3'
+    _server_id = 'cw2'
     if os.environ.get('server'):
         _server_id = os.environ['server']
     json_folder_name = 'server_json_' + re.sub('[^\d]', '', _server_id)
@@ -75,7 +78,7 @@ def starting_active_db_creation():
     client = Drive(server['json2'])
     files = client.files()
     folder_id = 'None'
-    while server.get('link: new_lot_id') is None:
+    while server.get('storage') is None:
         pass
     for file in files:
         if server['storage'] + '_folder' == file['name']:
@@ -90,7 +93,6 @@ def starting_active_db_creation():
             if file['name'] == re.sub('(.*)/', '', path['active']):
                 server['active'] = [file['id'], path['active']]
                 client.download_file(*server['active'])
-
     return path['active'] + ' загружен'
 
 
@@ -130,11 +132,11 @@ dispatcher = Dispatcher(bot)
 s_message = start_message(server['TOKEN'], stamp1)
 
 
-def drive_updater(drive_client, args):
+def drive_updater(drive_client, args, json_path):
     try:
         drive_client.update_file(*args)
     except IndexError and Exception:
-        drive_client = Drive(server['json3'])
+        drive_client = Drive(json_path)
         drive_client.update_file(*args)
     return drive_client
 
@@ -160,13 +162,13 @@ async def detector(message: types.Message):
 
 
 def lots_upload():
-    drive_client = Drive(server['json3'])
+    drive_client = Drive(server['json4'])
     while True:
         try:
-            sleep(5)
+            sleep(20)
             if storage_start is False:
                 printer('начало')
-                drive_client = drive_updater(drive_client, server['lots'])
+                drive_client = drive_updater(drive_client, server['lots'], server['json4'])
                 printer('конец')
         except IndexError and Exception:
             thread_executive()
@@ -220,7 +222,6 @@ def lot_updater():
             for lot in not_actives:
                 point += 1
                 if lot['stamp'] < time_now() - 3 * 60 * 60:
-                    print(lot['stamp'], time_now() - 3 * 60 * 60)
                     delete_lots_id.append(lot['au_id'])
                 for lot_property in lot:
                     sql_request_line += "'" + str(lot.get(lot_property)) + "', "
@@ -237,12 +238,11 @@ def lot_updater():
             for au_id in delete_lots_id:
                 sql_request_line += str(au_id) + ', '
             if sql_request_line:
-                print(sql_request_line)
                 secure_sql(db_active.custom_sql, start_sql_request + sql_request_line[:-2] + ');')
 
             if time_now() - stamp_updater <= 4:
                 sleep(4)
-            drive_client = drive_updater(drive_client, server['active'])
+            drive_client = drive_updater(drive_client, server['active'], server['json3'])
             printer('конец')
         except IndexError and Exception:
             thread_executive()
@@ -345,48 +345,71 @@ def storage():
 
 def messages():
     global const_base
+    drive_client = Drive(server['json2'])
     while True:
         if storage_start is False:
             try:
+                sleep(10)
                 const = {}
+                stats = {}
                 printer('начало')
+                qualities = ['None']
                 db = SQLighter(path['lots'])
                 client2 = gspread.service_account(server['json2'])
+                qualities = append_values(qualities, secure_sql(db.get_dist_quality))
                 const_items = client2.open('Notify').worksheet('items').get('A1:B50000', major_dimension='ROWS')
                 temp_base = {re.sub('️', '', item[0]): item[1] for item in const_items}
                 const_reversed_base = {value: key for key, value in temp_base.items()}
                 time_week = time_now() - (7 * 24 * 60 * 60)
                 const_base = copy(temp_base)
                 for base in const_reversed_base:
-                    qualities = secure_sql(db.get_dist_quality_by_base, base)
-                    const[base] = {'None': {'cost': '0/0', 'stats': ''}}
+                    const[base] = {}
+                    stats[base] = {}
                     for quality in qualities:
-                        const[base][quality] = {'cost': '0/0', 'stats': ''}
-                for base in const:
-                    lots = secure_sql(db.get_not_actives_by_base, base)
-                    for quality in const[base]:
-                        costs_list_full = []
-                        costs_list_week = []
-                        unsold_count_full = 0
-                        unsold_count_week = 0
-                        cancelled_count_full = 0
-                        cancelled_count_week = 0
-                        for lot in lots:
+                        stats[base][quality] = {'costs_list_full': [], 'costs_list_week': [],
+                                                'unsold_count_full': 0, 'unsold_count_week': 0,
+                                                'cancelled_count_full': 0, 'cancelled_count_week': 0}
+
+                lots = secure_sql(db.get_not_actives)
+                for lot in lots:
+                    if lot['base'] != 'None' and lot['quality']:
+                        qualities = ['None']
+                        if lot['quality'] != 'None':
+                            qualities.insert(0, lot['quality'])
+                        else:
+                            qualities.insert(0, 'Common')
+
+                        for quality in qualities:
                             if lot['status'] != 'Cancelled':
-                                if quality == lot['quality'] or quality == 'None' or \
-                                        (quality == 'Common' and lot['quality'] == 'None'):
-                                    if lot['b_castle'] != 'None':
-                                        costs_list_full.append(lot['cost'])
-                                        if lot['stamp'] >= time_week:
-                                            costs_list_week.append(lot['cost'])
-                                    else:
-                                        unsold_count_full += 1
-                                        if lot['stamp'] >= time_week:
-                                            unsold_count_week += 1
+                                if lot['b_castle'] != 'None':
+                                    stats[lot['base']][quality]['costs_list_full'].append(lot['cost'])
+                                    if lot['stamp'] >= time_week:
+                                        stats[lot['base']][quality]['costs_list_week'].append(lot['cost'])
+                                else:
+                                    stats[lot['base']][quality]['unsold_count_full'] += 1
+                                    if lot['stamp'] >= time_week:
+                                        stats[lot['base']][quality]['unsold_count_week'] += 1
                             else:
-                                cancelled_count_full += 1
+                                stats[lot['base']][quality]['cancelled_count_full'] += 1
                                 if lot['stamp'] >= time_week:
-                                    cancelled_count_week += 1
+                                    stats[lot['base']][quality]['cancelled_count_week'] += 1
+                for base in stats:
+                    for quality in list(stats[base]):
+                        if quality != 'None' and stats[base][quality] == clear_stats:
+                            del stats[base][quality]
+
+                for base in stats:
+                    if len(stats[base]) == 2:
+                        qualities = []
+                        for quality in stats[base]:
+                            qualities.append(quality)
+                        if stats[base][qualities[0]] == stats[base][qualities[1]]:
+                            del stats[base][qualities[1]]
+
+                for base in stats:
+                    for quality in stats[base]:
+                        const[base][quality] = {'cost': '0/0', 'stats': ''}
+                        costs_list_full = stats[base][quality]['costs_list_full']
                         text = '__' + bold('{0} ') + str(len(costs_list_full)) + '__'
                         for title in ['{1}', '{2}']:
                             text += bold(title) + '_'
@@ -397,12 +420,12 @@ def messages():
                             last_sold = ''
                             if title == '{1}':
                                 costs_list = costs_list_full
-                                unsold_count = unsold_count_full
-                                cancelled_count = cancelled_count_full
+                                unsold_count = stats[base][quality]['unsold_count_full']
+                                cancelled_count = stats[base][quality]['cancelled_count_full']
                             else:
-                                costs_list = costs_list_week
-                                unsold_count = unsold_count_week
-                                cancelled_count = cancelled_count_week
+                                costs_list = stats[base][quality]['costs_list_week']
+                                unsold_count = stats[base][quality]['unsold_count_week']
+                                cancelled_count = stats[base][quality]['cancelled_count_week']
                             if len(costs_list) > 0:
                                 minimum = min(costs_list)
                                 maximum = max(costs_list)
@@ -428,7 +451,7 @@ def messages():
                         const[const_reversed_base[base]] = const.pop(base)
                     doc.write(str(const))
                     doc.close()
-                drive_updater(Drive(server['json2']), server['storage_file'])
+                drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
                 printer('конец')
             except IndexError and Exception:
                 thread_executive()
