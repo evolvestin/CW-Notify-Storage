@@ -347,7 +347,7 @@ def messages():
     global const_base
     drive_client = Drive(server['json2'])
     while True:
-        if storage_start is True:#False
+        if storage_start is False:
             try:
                 const = {}
                 printer('начало')
