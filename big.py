@@ -347,7 +347,7 @@ def messages():
     global const_base
     drive_client = Drive(server['json2'])
     while True:
-        if storage_start is False:
+        if storage_start is True:#False
             try:
                 const = {}
                 printer('начало')
@@ -359,11 +359,11 @@ def messages():
                 temp_base = {re.sub('️', '', item[0]): item[1] for item in const_items}
                 const_reversed_base = {value: key for key, value in temp_base.items()}
                 time_week = time_now() - (7 * 24 * 60 * 60)
-                lots = secure_sql(db.get_not_actives)
                 const_base = copy(temp_base)
                 for base in const_reversed_base:
                     stats = {}
                     const[base] = {}
+                    lots = secure_sql(db.get_not_actives_by_base, base)
                     for quality in qualities:
                         stats[quality] = {'costs_list_full': [], 'costs_list_week': [],
                                           'unsold_count_full': 0, 'unsold_count_week': 0,
