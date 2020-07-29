@@ -19,6 +19,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from unidecode import unidecode
 week = {'Mon': 'Пн', 'Tue': 'Вт', 'Wed': 'Ср', 'Thu': 'Чт', 'Fri': 'Пт', 'Sat': 'Сб', 'Sun': 'Вс'}
+sql_patterns = ['database is locked', 'disk image is malformed', 'no such table']
 bot_error = telebot.TeleBot('580232743:AAEfqNw32ob_YkiM22GtcL68jDgP1ZJ_RMU')
 bot_start = telebot.TeleBot('456171769:AAGVaAEZTE1n4YLa-RnRmsQ60O9C31otqiI')
 idDevCentre = -1001312302092
@@ -164,18 +165,37 @@ def secure_sql(func, value=None):
     lock = True
     response = False
     while lock is True:
+        lock = False
         try:
             if value:
                 response = func(value)
             else:
                 response = func()
-            lock = False
         except IndexError and Exception as error:
-            lock = False
             response = str(error)
-            if str(error) == 'database is locked':
-                lock = True
-                sleep(1)
+            for pattern in sql_patterns:
+                if pattern in str(error):
+                    lock = True
+                    sleep(1)
+    return response
+
+
+async def async_secure_sql(func, value=None):
+    lock = True
+    response = False
+    while lock is True:
+        lock = False
+        try:
+            if value:
+                response = func(value)
+            else:
+                response = func()
+        except IndexError and Exception as error:
+            response = str(error)
+            for pattern in sql_patterns:
+                if pattern in str(error):
+                    await asyncio.sleep(1)
+                    lock = True
     return response
 
 
