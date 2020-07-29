@@ -11,7 +11,7 @@ db_lots_path = 'db/lots.db'
 db_active_path = 'db/active.db'
 allowed_params = ['a', 'w', 'e']
 allowed_params_engrave = ['a', 'w']
-path = {'lots': db_lots_path, 'active': db_active_path, 'storage': 'storage.json'}
+path = {'lots': db_lots_path, 'active': db_active_path, 'storage': 'storage.json', 'temp_lots': 'db/temp_lots.db'}
 properties_title_list = ['au_id', 'lot_id', 'item_emoji', 'enchant', 'engrave', 'item_name', 'params', 'quality',
                          'condition', 'modifiers', 's_castle', 's_emoji', 's_guild', 's_name', 'cost', 'b_castle',
                          'b_emoji', 'b_guild', 'b_name', 'stamp', 'status', 'base', 'raw']
@@ -137,9 +137,9 @@ class Mash:
 
     def detector(self, message, au_post, db_path=db_lots_path):
         def log_text_func(link, lot_id, base):
-            text = '#Рассылка лота <a href="' + link + '">№' + str(lot_id) + '</a>'
-            text += '#' + str(lot_id) + ' с айди #' + base + ' разошелся по '
-            text += bold('{}') + ' адресатам'
+            text = '#Рассылка лота #' + str(lot_id)
+            text += ' <a href="' + link + '">№' + str(lot_id) + '</a> '
+            text += 'с айди #' + base + ' разошелся по ' + bold('{}') + ' адресатам'
             return text
 
         lot, log_text = None, 'None'
