@@ -111,7 +111,7 @@ class SQLighter:
 
     def get_not_actives(self):
         with self.connection:
-            result = self.cursor.execute("SELECT * FROM lots WHERE NOT status = '#active'")
+            result = self.cursor.execute("SELECT * FROM lots WHERE NOT status = '#active' ORDER BY stamp")
         result_array = []
         for i in result:
             result_array.append(i)
@@ -125,13 +125,14 @@ class SQLighter:
             result_array.append(i['au_id'])
         return result_array
 
-    def get_dist_quality(self):
+    def get_dist_quality(self, lower=False):
         with self.connection:
             result = self.cursor.execute("SELECT DISTINCT quality FROM lots "
                                          "WHERE NOT quality = 'None' AND NOT quality = ''").fetchall()
-        result_array = ['common']
-        for i in result:
-            result_array.append(i['quality'].lower())
+        result_array = [i['quality'] for i in result]
+        result_array.insert(0, 'Common')
+        if lower:
+            result_array = [i.lower() for i in result_array]
         return result_array
 
     def get_dist_quality_by_base(self, base):
