@@ -91,11 +91,14 @@ def stamper(date, pattern=None):
 
 
 def send_dev_message(text, tag=code, good=False):
-    bot_name, host = get_bot_name()
     bot = bot_error
+    text = html_secure(text)
+    bot_name, host = get_bot_name()
     if good:
         bot = bot_start
-    text = bold(bot_name) + ' (' + code(host) + '):\n' + tag(html_secure(text))
+    if tag:
+        text = tag(text)
+    text = bold(bot_name) + ' (' + code(host) + '):\n' + text
     message = bot.send_message(idDevCentre, text, disable_web_page_preview=True, parse_mode='HTML')
     return message
 
@@ -388,17 +391,22 @@ def executive(logs):
     full_name = bold(bot_name) + '(' + code(host) + ').' + bold(name + '()')
     error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
     search_retry_pattern = 'Retry in (\d+) seconds|"Too Many Requests: retry after (\d+)"'
+    search_minor_fails_pattern = 'Failed to establish a new connection|Read timed out.'
+    search_major_fails_pattern = 'The (read|write) operation timed out|Backend Error'
     printer('Вылет ' + re.sub('<.*?>', '', full_name) + ' ' + error_raw[-1])
-    search_fails_pattern = 'Failed to establish a new connection'
     error = 'Вылет ' + full_name + '\n\n'
     for i in error_raw:
         error += html_secure(i)
     search_retry = re.search(search_retry_pattern, str(error))
-    search_fails = re.search(search_fails_pattern, str(error))
+    search_minor_fails = re.search(search_minor_fails_pattern, str(error))
+    search_major_fails = re.search(search_major_fails_pattern, str(error))
     if search_retry:
         retry = int(search_retry.group(1)) + 10
-    if search_fails:
+    if search_minor_fails:
         retry = 10
+        error = ''
+    if search_major_fails:
+        retry = 99
         error = ''
 
     if logs is None:
