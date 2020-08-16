@@ -360,12 +360,12 @@ def messages():
                             costs_list_full = stats[quality]['costs_list_full']
                             text = bold('{0} ') + str(len(costs_list_full)) + '__'
                             for title in ['{1}', '{2}']:
-                                text += bold(title) + '_'
                                 median = 0
                                 minimum = 0
                                 maximum = 0
                                 average = 0
-                                last_sold = ''
+                                last_sold = '\n\n'
+                                text += bold(title) + '_'
                                 if title == '{1}':
                                     costs_list = costs_list_full
                                     unsold_count = stats[quality]['unsold_count_full']
