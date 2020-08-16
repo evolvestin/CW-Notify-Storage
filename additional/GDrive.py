@@ -1,11 +1,11 @@
 import io
 import re
-from additional.objects import stamper
+import objects
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-scope = ['https://www.googleapis.com/auth/drive']
 standard_fields = 'files(id, name, parents, modifiedTime)'
+scope = ['https://www.googleapis.com/auth/drive']
 
 
 def auth(path):
@@ -16,8 +16,8 @@ def auth(path):
 
 def revoke_time(file):
     if file.get('modifiedTime'):
-        stamp = re.sub('\..*?Z', '', file['modifiedTime'])
-        file['modifiedTime'] = stamper(stamp, '%Y-%m-%dT%H:%M:%S')
+        stamp = re.sub(r'\..*?Z', '', file['modifiedTime'])
+        file['modifiedTime'] = objects.stamper(stamp, '%Y-%m-%dT%H:%M:%S')
     return file
 
 
