@@ -115,11 +115,8 @@ def starting_server_creation():
                 elif option == 'new_lot_id':
                     server['link: ' + option] = 'https://t.me/lot_updater/' + value
                     server[option] = int(value)
-                elif option == 'active_lot_ids':
-                    server['lot_updater'] = int(value)
     if os.environ.get('server') is None:
         server['TOKEN'] = '429683355:AAF3GReDyewByK-WRLQ44xpCNKIsYg1G8X0'
-        server['lot_updater'] = 62
     return 'Серверная константа загружена'
 
 
@@ -142,17 +139,6 @@ def drive_updater(drive_client, args, json_path):
     return drive_client
 
 
-async def telegram_editor(text, print_text):
-    try:
-        message = await bot.edit_message_text(code(text), -1001376067490, server['lot_updater'], parse_mode='HTML')
-        response = message['text'].split('/')
-    except IndexError and Exception:
-        print_text += ' (пост не изменился)'
-        response = text.split('/')
-    printer(print_text)
-    return response
-
-
 @dispatcher.edited_channel_post_handler()
 async def detector(message: types.Message):
     try:
@@ -173,34 +159,6 @@ def lots_upload():
                 printer('конец')
         except IndexError and Exception:
             thread_executive()
-
-
-async def telegram():
-    while True:
-        try:
-            db = SQLighter(path['active'])
-            sleep(20)
-            lots_raw = objects.query('https://t.me/lot_updater/' + str(server['lot_updater']), '(.*)')
-            if lots_raw:
-                array = lots_raw.group(1).split('/')
-                row = '/'
-                for i in array:
-                    if i != '':
-                        row += i + '/'
-                au_id = secure_sql(db.get_actives_id)
-                for i in au_id:
-                    if str(i) not in array:
-                        if len(row) < 4085:
-                            row += str(i) + '/'
-                array = await telegram_editor(row, 'добавил новые лоты в telegram')
-                for i in array:
-                    if i != '':
-                        if int(i) not in au_id:
-                            row = re.sub('/' + str(i) + '/', '/', row)
-                await telegram_editor(row, 'удалил закончившиеся из telegram')
-
-        except IndexError and Exception:
-            await executive()
 
 
 def lot_updater():
@@ -477,5 +435,4 @@ if __name__ == '__main__':
     threads = [storage, lot_updater, lots_upload, messages]
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
-    dispatcher.loop.create_task(telegram())
     executor.start_polling(dispatcher)
