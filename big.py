@@ -3,6 +3,7 @@ import os
 import re
 import codecs
 import gspread
+import objects
 import _thread
 from copy import copy
 from time import sleep
@@ -11,14 +12,14 @@ from SQL import SQLighter
 from statistics import mean
 from ast import literal_eval
 from aiogram.utils import executor
+from additional import game_objects
 from additional.GDrive import Drive
 from aiogram.dispatcher import Dispatcher
+from objects import async_exec as executive
 from statistics import median as median_function
-from additional.objects import async_exec as executive
-from additional.objects import thread_exec as thread_executive
-from additional.game_objects import Mash, path, allowed_params_engrave
-from additional.objects import code, bold, query, printer, log_time, time_now, concurrent_functions
-from additional.objects import secure_sql, append_values, start_message, start_main_bot, edit_dev_message
+from objects import thread_exec as thread_executive
+from additional.game_objects import Mash, path, allowed_lists
+from objects import code, bold, printer, time_now, secure_sql, append_values
 stamp1 = time_now()
 
 old2 = 0
@@ -37,7 +38,7 @@ def starting_new_lot():
     global old2
     while server.get('link: new_lot_id') is None:
         pass
-    new_lot_id_search = query(server['link: new_lot_id'], '(\d+?)/')
+    new_lot_id_search = objects.query(server['link: new_lot_id'], r'(\d+?)/')
     if new_lot_id_search:
         old2 = int(new_lot_id_search.group(1)) + 1
     return 'Переменная old2 = ' + str(old2) + ' загружена'
@@ -62,12 +63,12 @@ def create_server_json_list():
     _server_id = 'cw2'
     if os.environ.get('server'):
         _server_id = os.environ['server']
-    json_folder_name = 'server_json_' + re.sub('[^\d]', '', _server_id)
+    json_folder_name = 'server_json_' + re.sub(r'[^\d]', '', _server_id)
     for file_name in os.listdir(json_folder_name):
-        search_json = re.search('(\d)\.json', file_name)
+        search_json = re.search(r'(\d)\.json', file_name)
         if search_json:
             server['json' + search_json.group(1)] = json_folder_name + '/' + file_name
-    server['non_emoji_symbols'] = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#$%&='@?*\[\]+.^{}()`⚡|~:;/\\]"
+    server['non_emoji_symbols'] = game_objects.symbols
     _client = gspread.service_account(server['json2'])
     _spreadsheet = _client.open('Notify')
     return _client, _server_id, _spreadsheet
@@ -124,12 +125,12 @@ def starting_server_creation():
 
 client1, server_id, spreadsheet = create_server_json_list()
 functions = [starting_const_creation, starting_server_creation]
-concurrent_functions(append_values(functions, [starting_active_db_creation, starting_new_lot]))
-bot = start_main_bot('async', server['TOKEN'])
+objects.concurrent_functions(append_values(functions, [starting_active_db_creation, starting_new_lot]))
+bot = objects.start_main_bot('async', server['TOKEN'])
 Mash = Mash(server, const_base)
 dispatcher = Dispatcher(bot)
 # ====================================================================================
-s_message = start_message(server['TOKEN'], stamp1)
+s_message = objects.start_message(server['TOKEN'], stamp1)
 
 
 def drive_updater(drive_client, args, json_path):
@@ -179,7 +180,7 @@ async def telegram():
         try:
             db = SQLighter(path['active'])
             sleep(20)
-            lots_raw = query('https://t.me/lot_updater/' + str(server['lot_updater']), '(.*)')
+            lots_raw = objects.query('https://t.me/lot_updater/' + str(server['lot_updater']), '(.*)')
             if lots_raw:
                 array = lots_raw.group(1).split('/')
                 row = '/'
@@ -299,7 +300,7 @@ def storage():
                 temp = []
                 for item_name in const_base:
                     if item_name in lot['item_name'] \
-                            and const_base[item_name][0] in allowed_params_engrave:
+                            and const_base[item_name][0] in allowed_lists['engrave']:
                         temp.append(item_name)
                 if len(temp) >= 1:
                     item_name = temp[0]
@@ -323,7 +324,7 @@ def storage():
         if old2 == 0:
             old2 = old
 
-        dev_message = edit_dev_message(s_message, '\n' + log_time(tag=code))
+        dev_message = objects.edit_dev_message(s_message, '\n' + objects.log_time(tag=code))
         request_array = []
         global_limit = 150
         db_active = SQLighter(path['active'])
@@ -331,9 +332,8 @@ def storage():
         for au_id in range(old, old2):
             if au_id not in currently_active:
                 request_array.append(au_id)
-        printer('мы уже тут ебать')
         Mash.multiple_requests(global_limit, local_limit=150, request_array=request_array, storage=True)
-        edit_dev_message(dev_message, '\n' + log_time(tag=code))
+        objects.edit_dev_message(dev_message, '\n' + objects.log_time(tag=code))
         printer('закончил работу')
         storage_start = False
         sleep(60)
@@ -400,7 +400,7 @@ def messages():
                         if stats.get(quality):
                             const[base][quality] = {'cost': '0/0', 'stats': ''}
                             costs_list_full = stats[quality]['costs_list_full']
-                            text = '__' + bold('{0} ') + str(len(costs_list_full)) + '__'
+                            text = bold('{0} ') + str(len(costs_list_full)) + '__'
                             for title in ['{1}', '{2}']:
                                 text += bold(title) + '_'
                                 median = 0
@@ -424,17 +424,17 @@ def messages():
                                     average = round(mean(costs_list), 2)
                                     median = int(median) if float(median).is_integer() else median
                                     if title == '{2}':
-                                        pattern, median_text = '/\d+', '/' + str(median)
+                                        pattern, median_text = r'/\d+', '/' + str(median)
                                         last_sold = '_{8} ' + str(costs_list[-1])
                                     else:
-                                        pattern, median_text = '\d+/', str(median) + '/'
+                                        pattern, median_text = r'\d+/', str(median) + '/'
                                     const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
                                 text += '{3} ' + str(median) + '_' + \
                                     '{4} ' + str(average) + '_' + \
                                     '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
                                     '{6} ' + str(cancelled_count) + '_' + \
                                     '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
-                                    last_sold + '__'
+                                    last_sold
                             const[base][quality]['stats'] = text
 
                 with codecs.open('storage.json', 'w', 'utf-8') as doc:
@@ -466,7 +466,7 @@ async def repeat_all_messages(message: types.Message):
             elif message['text'].lower().startswith('/lots'):
                 size = round(os.path.getsize(path['lots']) / (1024 * 1024), 2)
                 text_size = 'Размер (' + code(path['lots']) + '): ' + bold(size) + ' MB'
-                await bot.send_message(message['chat']['id'], text_size)
+                await bot.send_message(message['chat']['id'], text_size, parse_mode='HTML')
             else:
                 await bot.send_message(message['chat']['id'], 'Я работаю', reply_markup=None)
     except IndexError and Exception:
