@@ -1,4 +1,5 @@
 import re
+import objects
 import requests
 from time import sleep
 from SQL import SQLighter
@@ -6,12 +7,15 @@ import concurrent.futures
 from bs4 import BeautifulSoup
 from datetime import datetime
 from additional.game_time import timer
-from additional.objects import bold, code, printer, time_now, secure_sql, html_secure, send_dev_message
+from objects import bold, code, printer, html_link, secure_sql
 db_lots_path = 'db/lots.db'
 db_active_path = 'db/active.db'
-allowed_params = ['a', 'w', 'e']
-allowed_params_engrave = ['a', 'w']
-path = {'lots': db_lots_path, 'active': db_active_path, 'storage': 'storage.json', 'temp_lots': 'db/temp_lots.db'}
+allowed_lists = {'engrave': ['a', 'w'], 'params': ['a', 'w', 'e']}
+symbols = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#?$%&='*\[\]+.^{}()`⚡|~@:;/\\]"
+path = {'lots': db_lots_path, 'active': db_active_path, 'storage': 'storage.json'}
+search_block_pattern = 'initiate conversation with a user|user is deactivated' \
+                       '|Have no rights|bot was blocked by the user|Chat not found' \
+                       '|bot was kicked from the group chat|The group has been migrated'
 properties_title_list = ['au_id', 'lot_id', 'item_emoji', 'enchant', 'engrave', 'item_name', 'params', 'quality',
                          'condition', 'modifiers', 's_castle', 's_emoji', 's_guild', 's_name', 'cost', 'b_castle',
                          'b_emoji', 'b_guild', 'b_name', 'stamp', 'status', 'base', 'raw']
@@ -136,12 +140,6 @@ class Mash:
         return local_limit
 
     def detector(self, message, au_post, db_path=db_lots_path):
-        def log_text_func(link, lot_id, base):
-            text = '#Рассылка лота #' + str(lot_id)
-            text += ' <a href="' + link + '">№' + str(lot_id) + '</a> '
-            text += 'с айди #' + base + ' разошелся по ' + bold('{}') + ' адресатам'
-            return text
-
         lot, log_text = None, 'None'
         lot_split = message['text'].split('/')
         print_text = self.server['link: channel'] + lot_split[0]
@@ -149,15 +147,16 @@ class Mash:
             db = SQLighter(db_path)
             lot = self.form(message['text'])
             lot_in_db = secure_sql(db.get_lot, lot['au_id'])
+            log_text = '#Рассылка лота #' + str(lot['lot_id']) + ' ' + \
+                html_link(print_text, '№' + str(lot['lot_id'])) + ' с айди #' + lot['base'] + \
+                ' разошелся по ' + bold('{}') + ' адресатам ' + code('id:' + str(lot['au_id']))
             if lot_in_db is False:
                 secure_sql(db.merge, lot)
                 if lot['base'] != 'None':
-                    if lot['status'] == '#active':
-                        log_text = log_text_func(print_text, lot['au_id'], lot['base'])
-                    else:
+                    if lot['status'] != '#active':
                         print_text += ' Не активен, в базу добавлен'
                 else:
-                    send_dev_message(print_text + '\nЭтого куска говна нет в константах')
+                    objects.send_dev_message(print_text + code('\nЭтого куска говна нет в константах'), tag=None)
             else:
                 print_text += ' Уже в базе'
         else:
@@ -166,9 +165,9 @@ class Mash:
         return lot, log_text
 
     def form(self, lot_raw, depth='hard'):
-        stamp_now = time_now() - 36 * 60 * 60
+        stamp_now = objects.time_now() - 36 * 60 * 60
         lot_split = re.sub('\'', '&#39;', re.sub('️', '', lot_raw)).split('/')
-        search_au_id = re.search('(\d+)', lot_split[0])
+        search_au_id = re.search(r'(\d+)', lot_split[0])
         lot = {}
         for i in properties_title_list:
             lot[i] = 'None'
@@ -191,11 +190,11 @@ class Mash:
                         lot[i] = int(search.group(1))
                     elif i in ['seller', 'buyer']:
                         user = search.group(1)
-                        search_guild = re.search('\[(.*?)\]', user)
+                        search_guild = re.search(r'\[(.*?)]', user)
                         search_castle = re.search(self.server['castle_list'], user)
                         if search_guild:
                             lot[i[0] + '_guild'] = search_guild.group(1)
-                            user = re.sub('\[.*?\]', '', user, 1)
+                            user = re.sub(r'\[.*?]', '', user, 1)
                         if search_castle:
                             lot[i[0] + '_castle'] = search_castle.group(1)
                             user = re.sub(self.server['castle_list'], '', user, 1)
@@ -226,21 +225,21 @@ class Mash:
 
     def lot_title(self, lot, title, depth='hard', generate=False):
         if generate:
-            title = re.sub('\'', '&#39;', title)
             title = re.sub('️', '', title)
-            title = html_secure(title)
+            title = objects.html_secure(title)
+            title = re.sub('\'', '&#39;', title)
             for i in properties_title_list:
                 lot[i] = 'None'
-        params_array = re.findall(' \+\d+.', title)
-        item_name = re.sub(' \+\d+.', '', title)
-        enchant_search = re.search('\+(\d+) ', item_name)
+        item_name = re.sub(r' \+\d+.', '', title)
+        params_array = re.findall(r' \+\d+.', title)
+        enchant_search = re.search(r'\+(\d+) ', item_name)
         for param in params_array:
             if lot['params'] == 'None':
                 lot['params'] = ''
             lot['params'] += param
         if enchant_search:
             lot['enchant'] = enchant_search.group(1)
-            item_name = re.sub('\+\d+ ', '', item_name)
+            item_name = re.sub(r'\+\d+ ', '', item_name)
             item_name = re.sub('⚡', '', item_name)
         item_emoji = re.sub(self.server['non_emoji_symbols'], '', item_name)
         if len(item_emoji) > 0:
@@ -250,10 +249,10 @@ class Mash:
         lot['item_name'] = item_name
         if item_name in self.const_base:
             lot['base'] = self.const_base[item_name]
-            if lot['params'] != 'None' and lot['base'][0] not in allowed_params:
+            if lot['params'] != 'None' and lot['base'][0] not in allowed_lists['params']:
                 lot['base'] = 'None'
         else:
-            search_mystery = re.search('lvl\.\d+', lot['item_name'])
+            search_mystery = re.search(r'lvl\.\d+', lot['item_name'])
             if search_mystery:
                 search_amulet = re.search('amulet', lot['item_name'])
                 search_ring = re.search('ring', lot['item_name'])
@@ -278,7 +277,7 @@ class Mash:
             temp = []
             for item_name in self.const_base:
                 if item_name in lot['item_name'] \
-                        and self.const_base[item_name][0] in allowed_params_engrave:
+                        and self.const_base[item_name][0] in allowed_lists['engrave']:
                     temp.append(item_name)
             if len(temp) >= 1:
                 item_name = temp[0]
