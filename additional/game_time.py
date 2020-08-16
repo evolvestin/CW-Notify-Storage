@@ -64,3 +64,35 @@ def timer(search):
     seconds += s_minute * 60
     stack = int(stamp + (seconds - sec) / 3)
     return stack
+
+
+def time_mash(stamp, lang=None):
+    if lang is None:
+        lang = {'day': '{1}', 'hour': '{2}', 'min': '{3}', 'ends': '{4}'}
+    diff = stamp - int(datetime.now().timestamp())
+    diff_hour = round(diff // (60 * 60))
+    if diff_hour > 24:
+        day = round(diff_hour // 24)
+        s_day = str(day) + lang['day']
+        diff_hour -= round(diff_hour // 24) * 24
+        s_hour = str(diff_hour) + lang['hour']
+    elif diff_hour > 0:
+        day = 0
+        s_day = ''
+        s_hour = str(diff_hour) + lang['hour']
+    elif diff_hour < 0:
+        day = 0
+        s_day = ''
+        s_hour = ''
+        diff_hour = 0
+    else:
+        day = 0
+        s_day = ''
+        s_hour = ''
+    diff_min = round((diff - day * 24 * 60 * 60 - diff_hour * 60 * 60) // 60)
+    if diff_min >= 0:
+        s_min = str(diff_min) + lang['min']
+    else:
+        s_min = lang['ends']
+    text = s_day + s_hour + s_min
+    return text
