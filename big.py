@@ -364,7 +364,7 @@ def messages():
                                 minimum = 0
                                 maximum = 0
                                 average = 0
-                                last_sold = '\n\n'
+                                last_sold = ''
                                 text += bold(title) + '_'
                                 if title == '{1}':
                                     costs_list = costs_list_full
@@ -385,6 +385,7 @@ def messages():
                                         pattern, median_text = r'/\d+', '/' + str(median)
                                         last_sold = '_{8} ' + str(costs_list[-1])
                                     else:
+                                        last_sold = '__'
                                         pattern, median_text = r'\d+/', str(median) + '/'
                                     const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
                                 text += '{3} ' + str(median) + '_' + \
