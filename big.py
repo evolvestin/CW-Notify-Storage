@@ -367,6 +367,7 @@ def messages():
                                 last_sold = ''
                                 text += bold(title) + '_'
                                 if title == '{1}':
+                                    last_sold = '__'
                                     costs_list = costs_list_full
                                     unsold_count = stats[quality]['unsold_count_full']
                                     cancelled_count = stats[quality]['cancelled_count_full']
@@ -382,10 +383,9 @@ def messages():
                                     average = round(mean(costs_list), 2)
                                     median = int(median) if float(median).is_integer() else median
                                     if title == '{2}':
-                                        pattern, median_text = r'/\d+', '/' + str(median)
                                         last_sold = '_{8} ' + str(costs_list[-1])
+                                        pattern, median_text = r'/\d+', '/' + str(median)
                                     else:
-                                        last_sold = '__'
                                         pattern, median_text = r'\d+/', str(median) + '/'
                                     const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
                                 text += '{3} ' + str(median) + '_' + \
