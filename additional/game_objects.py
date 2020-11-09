@@ -59,6 +59,12 @@ class Mash:
             text += lang['ends']
         return text
 
+    def get_name_by_base(self, item_name, item_id):
+        for const_name in self.const_base:
+            if self.const_base[const_name] == item_id:
+                item_name = const_name
+        return item_name
+
     def engrave(self, const_name, lot):
         engraved = re.sub(const_name, '', lot['item_name'], 1)
         base = self.const_base.get(const_name)
