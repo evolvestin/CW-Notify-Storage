@@ -233,7 +233,6 @@ class Mash:
                         if status == 'Failed':
                             status = 'Cancelled'
                         if status == '#active':
-                            print("lot['stamp'], stamp_now == ", lot['stamp'], stamp_now)
                             if lot['stamp'] < stamp_now:
                                 status = 'Finished'
                         lot[i] = status
