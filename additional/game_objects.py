@@ -2,7 +2,6 @@ import re
 import objects
 import requests
 from time import sleep
-from timer import timer
 from SQL import SQLighter
 import concurrent.futures
 from bs4 import BeautifulSoup
@@ -188,6 +187,7 @@ class Mash:
         return lot, log_text
 
     def form(self, lot_raw, depth='hard'):
+        from timer import timer
         stamp_now = objects.time_now() - 36 * 60 * 60
         lot_split = re.sub('\'', '&#39;', re.sub('️', '', lot_raw)).split('/')
         search_au_id = re.search(r'(\d+)', lot_split[0])
@@ -233,6 +233,7 @@ class Mash:
                         if status == 'Failed':
                             status = 'Cancelled'
                         if status == '#active':
+                            print("lot['stamp'], stamp_now == ", lot['stamp'], stamp_now)
                             if lot['stamp'] < stamp_now:
                                 status = 'Finished'
                         lot[i] = status
