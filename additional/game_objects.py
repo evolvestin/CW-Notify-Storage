@@ -2,11 +2,11 @@ import re
 import objects
 import requests
 from time import sleep
+from timer import timer
 from SQL import SQLighter
 import concurrent.futures
 from bs4 import BeautifulSoup
 from datetime import datetime
-from additional.timer import timer
 from objects import bold, code, secure_sql
 db_lots_path = 'db/lots.db'
 db_active_path = 'db/active.db'
