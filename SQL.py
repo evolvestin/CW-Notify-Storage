@@ -47,18 +47,6 @@ class SQLighter:
         else:
             return False
 
-    def get_parameter(self, params):
-        with self.connection:
-            result = self.cursor.execute("SELECT DISTINCT enchant, condition, params FROM lots "
-                                         "WHERE item_name = ? "
-                                         "AND quality = ? "
-                                         "AND NOT condition = 'Broken' AND NOT params = 'None'"
-                                         "ORDER BY enchant DESC", (params[0], params[1],)).fetchall()
-        result_array = []
-        for i in result:
-            result_array.append(i)
-        return result_array
-
     def get_actives(self):
         with self.connection:
             result = self.cursor.execute("SELECT * FROM lots WHERE status = '#active' ORDER BY stamp").fetchall()
@@ -75,14 +63,6 @@ class SQLighter:
             for i in result:
                 result_array.append(i)
             return result_array
-
-    def get_updates(self):
-        with self.connection:
-            result = self.cursor.execute("SELECT * FROM users WHERE updates = 1;")
-        result_array = []
-        for i in result:
-            result_array.append(i)
-        return result_array
 
     def get_dist_base(self, array):
         start_sql_request = "SELECT DISTINCT item_name FROM lots WHERE base <> 'None' "
@@ -135,26 +115,6 @@ class SQLighter:
             result_array = [i.lower() for i in result_array]
         return result_array
 
-    def get_dist_quality_by_base(self, base):
-        with self.connection:
-            result = self.cursor.execute("SELECT DISTINCT quality FROM lots WHERE base = ? "
-                                         "AND NOT quality = 'None' AND NOT quality = ''", (base,)).fetchall()
-        result_array = []
-        for i in result:
-            result_array.append(i['quality'])
-        if len(result_array) > 0:
-            result_array.insert(0, 'Common')
-        return result_array
-
-    def get_user_subs(self, item_id):
-        with self.connection:
-            result = self.cursor.execute("SELECT id, lang, gmt, subscriptions FROM users WHERE "
-                                         "subscriptions LIKE '%" + item_id + "%' AND NOT blocked = '🅾️';")
-        result_array = []
-        for i in result:
-            result_array.append(i)
-        return result_array
-
     def get_active_by_base(self, base):
         with self.connection:
             result = self.cursor.execute("SELECT * FROM lots WHERE base = ? "
@@ -164,14 +124,6 @@ class SQLighter:
             result_array.append(i)
         return result_array
 
-    def get_user(self, user_id):
-        with self.connection:
-            result = self.cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchall()
-        if result:
-            return result[0]
-        else:
-            return False
-
     def get_lot(self, au_id):
         with self.connection:
             result = self.cursor.execute("SELECT * FROM lots WHERE au_id = ?", (au_id,)).fetchall()
@@ -179,19 +131,3 @@ class SQLighter:
             return result[0]
         else:
             return False
-
-    def get_by_lot_id(self, lot_id):
-        with self.connection:
-            result = self.cursor.execute("SELECT * FROM lots WHERE lot_id = ?", (lot_id,)).fetchall()
-        if result:
-            return result[0]
-        else:
-            return False
-
-    def update_updates(self, user_id):
-        with self.connection:
-            self.cursor.execute("UPDATE users SET updates='0' WHERE id = ?", (user_id,))
-
-    def update_blocked(self, user_id):
-        with self.connection:
-            self.cursor.execute("UPDATE users SET blocked='🅾️', updates=1 WHERE id = ?", (user_id,))

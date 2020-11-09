@@ -6,16 +6,16 @@ from SQL import SQLighter
 import concurrent.futures
 from bs4 import BeautifulSoup
 from datetime import datetime
-from additional.game_time import timer
-from objects import bold, code, printer, html_link, secure_sql
+from additional.timer import timer
+from objects import bold, code, secure_sql
 db_lots_path = 'db/lots.db'
 db_active_path = 'db/active.db'
 allowed_lists = {'engrave': ['a', 'w'], 'params': ['a', 'w', 'e']}
 symbols = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#?$%&='*\[\]+.^{}()`⚡|~@:;/\\]"
 path = {'lots': db_lots_path, 'active': db_active_path, 'storage': 'storage.json'}
-search_block_pattern = 'initiate conversation with a user|user is deactivated' \
-                       '|Have no rights|bot was blocked by the user|Chat not found' \
-                       '|bot was kicked from the group chat|The group has been migrated'
+search_block_pattern = 'initiate conversation with a user|user is deactivated|Have no rights' \
+                       '|The group has been migrated|bot was kicked from the supergroup chat' \
+                       '|bot was blocked by the user|Chat not found|bot was kicked from the group chat'
 properties_title_list = ['au_id', 'lot_id', 'item_emoji', 'enchant', 'engrave', 'item_name', 'params', 'quality',
                          'condition', 'modifiers', 's_castle', 's_emoji', 's_guild', 's_name', 'cost', 'b_castle',
                          'b_emoji', 'b_guild', 'b_name', 'stamp', 'status', 'base', 'raw']
@@ -36,6 +36,29 @@ class Mash:
                 start_sql_request += column_name + ', '
         start_sql_request = start_sql_request[:-2] + ') VALUES ('
         return start_sql_request
+
+    @staticmethod
+    def time(stamp, lang=None):
+        day = 0
+        text = ''
+        if lang is None:
+            lang = {'day': '{1}', 'hour': '{2}', 'min': '{3}', 'ends': '{4}'}
+        seconds = stamp - objects.time_now()
+        hours = int(seconds / (60 * 60))
+        if hours > 24:
+            day = int(hours / 24)
+            hours -= day * 24
+            text += str(day) + lang['day'] + str(hours) + lang['hour']
+        elif hours > 0:
+            text += str(hours) + lang['hour']
+        elif hours < 0:
+            hours = 0
+        minutes = int((seconds / 60) - (day * 24 * 60) - (hours * 60))
+        if minutes >= 0:
+            text += str(minutes) + lang['min']
+        else:
+            text += lang['ends']
+        return text
 
     def engrave(self, const_name, lot):
         engraved = re.sub(const_name, '', lot['item_name'], 1)
@@ -113,7 +136,7 @@ class Mash:
                         else:
                             db[db_lots_path]['sql'] += sql_request_line
 
-            printer(print_text + str(datetime.now().timestamp() - stamp))
+            objects.printer(print_text + str(datetime.now().timestamp() - stamp))
             for au_id in temp_array:
                 if au_id is not None:
                     update_array.append(au_id)
@@ -148,7 +171,7 @@ class Mash:
             lot = self.form(message['text'])
             lot_in_db = secure_sql(db.get_lot, lot['au_id'])
             log_text = '#Рассылка лота #' + str(lot['lot_id']) + ' ' + \
-                html_link(print_text, '№' + str(lot['lot_id'])) + ' с айди #' + lot['base'] + \
+                objects.html_link(print_text, '№' + str(lot['lot_id'])) + ' с айди #' + lot['base'] + \
                 ' разошелся по ' + bold('{}') + ' адресатам ' + code('id:' + str(lot['au_id']))
             if lot_in_db is False:
                 secure_sql(db.merge, lot)
@@ -161,7 +184,7 @@ class Mash:
                 print_text += ' Уже в базе'
         else:
             print_text += ' Старый, lot_updater() разберется'
-        printer(print_text)
+        objects.printer(print_text)
         return lot, log_text
 
     def form(self, lot_raw, depth='hard'):
