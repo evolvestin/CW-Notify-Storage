@@ -167,7 +167,7 @@ class Mash:
         sleep(retry)
         return local_limit
 
-    def detector(self, message, au_post, db_path=db_lots_path):
+    def detector(self, message, au_post, auth, db_path=db_lots_path):
         lot, log_text = None, 'None'
         lot_split = message['text'].split('/')
         print_text = self.server['link: channel'] + lot_split[0]
@@ -184,7 +184,7 @@ class Mash:
                     if lot['status'] != '#active':
                         print_text += ' Не активен, в базу добавлен'
                 else:
-                    objects.send_dev_message(print_text + code('\nЭтого куска говна нет в константах'), tag=None)
+                    auth.send_dev_message(print_text + code('\nЭтого куска говна нет в константах'), tag=None)
             else:
                 print_text += ' Уже в базе'
         else:

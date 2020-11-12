@@ -15,9 +15,7 @@ from aiogram.utils import executor
 from additional import game_objects
 from additional.GDrive import Drive
 from aiogram.dispatcher import Dispatcher
-from objects import async_exec as executive
 from statistics import median as median_function
-from objects import thread_exec as thread_executive
 from additional.game_objects import Mash, path, allowed_lists
 from objects import code, bold, printer, time_now, secure_sql, append_values
 stamp1 = time_now()
@@ -123,11 +121,12 @@ def starting_server_creation():
 client1, server_id, spreadsheet = create_server_json_list()
 functions = [starting_const_creation, starting_server_creation]
 objects.concurrent_functions(append_values(functions, [starting_active_db_creation, starting_new_lot]))
-bot = objects.start_main_bot('async', server['TOKEN'])
+Auth = objects.AuthCentre(server['TOKEN'])
+bot = Auth.start_main_bot('async')
 Mash = Mash(server, const_base)
 dispatcher = Dispatcher(bot)
 # ====================================================================================
-s_message = objects.start_message(server['TOKEN'], stamp1)
+s_message = Auth.start_message(stamp1)
 
 
 def drive_updater(drive_client, args, json_path):
@@ -143,9 +142,9 @@ def drive_updater(drive_client, args, json_path):
 async def detector(message: types.Message):
     try:
         if message['chat']['id'] == -1001376067490 and message['message_id'] == server['new_lot_id']:
-            Mash.detector(message, old2, db_path=path['active'])
+            Mash.detector(message, old2, Auth, db_path=path['active'])
     except IndexError and Exception:
-        await executive(str(message))
+        await Auth.async_exec(str(message))
 
 
 def lots_upload():
@@ -158,7 +157,7 @@ def lots_upload():
                 drive_client = drive_updater(drive_client, server['lots'], server['json4'])
                 printer('конец')
         except IndexError and Exception:
-            thread_executive()
+            Auth.thread_exec()
 
 
 def lot_updater():
@@ -204,7 +203,7 @@ def lot_updater():
             drive_client = drive_updater(drive_client, server['active'], server['json3'])
             printer('конец')
         except IndexError and Exception:
-            thread_executive()
+            Auth.thread_exec()
 
 
 def storage():
@@ -282,7 +281,7 @@ def storage():
         if old2 == 0:
             old2 = old
 
-        dev_message = objects.edit_dev_message(s_message, '\n' + objects.log_time(tag=code))
+        dev_message = Auth.edit_dev_message(s_message, '\n' + objects.log_time(tag=code))
         request_array = []
         global_limit = 150
         db_active = SQLighter(path['active'])
@@ -291,14 +290,14 @@ def storage():
             if au_id not in currently_active:
                 request_array.append(au_id)
         Mash.multiple_requests(global_limit, local_limit=150, request_array=request_array, storage=True)
-        objects.edit_dev_message(dev_message, '\n' + objects.log_time(tag=code))
+        Auth.edit_dev_message(dev_message, '\n' + objects.log_time(tag=code))
         printer('закончил работу')
         storage_start = False
         sleep(60)
         global_limit = 300
         _thread.exit()
     except IndexError and Exception:
-        thread_executive()
+        Auth.thread_exec()
 
 
 def messages():
@@ -404,7 +403,7 @@ def messages():
                 drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
                 printer('конец')
             except IndexError and Exception:
-                thread_executive()
+                Auth.thread_exec()
 
 
 @dispatcher.message_handler()
@@ -429,7 +428,7 @@ async def repeat_all_messages(message: types.Message):
             else:
                 await bot.send_message(message['chat']['id'], 'Я работаю', reply_markup=None)
     except IndexError and Exception:
-        await executive(str(message))
+        await Auth.async_exec(str(message))
 
 
 if __name__ == '__main__':
