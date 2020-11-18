@@ -291,8 +291,8 @@ def storage():
                 request_array.append(au_id)
         Mash.multiple_requests(global_limit, local_limit=150, request_array=request_array, storage=True)
         if len(dict(dev_message.json).get('text').split('\n')) < 4:
-            Auth.send_json(s_message, 's_message', 'Проблемы с записью последовательностей')
-            Auth.send_json(dev_message, 'dev_message', 'Проблемы с записью последовательностей')
+            Auth.send_json(str(s_message), 's_message', 'Проблемы с записью последовательностей')
+            Auth.send_json(str(dev_message), 'dev_message', 'Проблемы с записью последовательностей')
         Auth.edit_dev_message(dev_message, '\n' + objects.log_time(tag=code))
         printer('закончил работу')
         storage_start = False
