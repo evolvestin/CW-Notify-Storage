@@ -119,6 +119,7 @@ class Mash:
                     if len(update_array) < local_limit and au_id not in used_array:
                         update_array.append(au_id)
                         used_array.append(au_id)
+            print(update_array)
             for au_id in update_array:
                 futures.append(self.server['link: channel'] + str(au_id) + '?embed=1')
                 temp_array.append(au_id)
