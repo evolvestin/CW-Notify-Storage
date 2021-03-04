@@ -142,7 +142,8 @@ def drive_updater(drive_client, args, json_path):
 async def detector(message: types.Message):
     try:
         if message['chat']['id'] == -1001376067490 and message['message_id'] == server['new_lot_id']:
-            Mash.detector(message, old2, Auth, db_path=path['active'])
+            lot, log_text = Mash.detector(message, old2, Auth, db_path=path['active'])
+            print(log_text)
     except IndexError and Exception:
         await Auth.async_exec(str(message))
 
