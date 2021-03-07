@@ -2,4 +2,4 @@ import os
 
 
 def timer(search):
-    return os.environ['timer.py']
+    return os.environ.get('timer.py')
