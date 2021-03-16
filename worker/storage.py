@@ -391,7 +391,7 @@ def start(stamp):
     if os.environ.get('server') != 'local':
         start_message = Auth.start_message(stamp)
         threads = [lot_updater, lots_upload, messages]
-    _thread.start_new_thread(storage, start_message)
+    _thread.start_new_thread(storage, (start_message,))
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
     executor.start_polling(dispatcher)
