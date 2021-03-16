@@ -1,1 +1,1 @@
-worker: python storage.py
+worker: python main.py
