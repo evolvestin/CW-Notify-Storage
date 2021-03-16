@@ -5,41 +5,43 @@ import codecs
 import gspread
 import objects
 import _thread
-from copy import copy
 from time import sleep
+import concurrent.futures
 from aiogram import types
 from SQL import SQLighter
 from statistics import mean
 from ast import literal_eval
+from copy import copy, deepcopy
 from aiogram.utils import executor
-from additional import game_objects
 from additional.GDrive import Drive
 from aiogram.dispatcher import Dispatcher
 from statistics import median as median_function
-from additional.game_objects import Mash, path, allowed_lists
-from objects import code, bold, printer, time_now, secure_sql, append_values
-stamp1 = time_now()
+from additional.game_objects import Mash, path, symbols, allowed_lists
+from objects import code, bold, printer, log_time, time_now, secure_sql, sql_divide, append_values
+# ========================================================================================================
 
-old2 = 0
-server = {}
-const_base = {}
-idMe = 396978030
-global_limit = 300
-storage_start = True
-clear_stats = {'costs_list_full': [], 'costs_list_week': [],
-               'unsold_count_full': 0, 'unsold_count_week': 0,
-               'cancelled_count_full': 0, 'cancelled_count_week': 0}
-# ====================================================================================
+
+def create_server_json_list():
+    global server
+    server['non_emoji_symbols'] = symbols
+    created_files = objects.environmental_files(python=True)
+    for file_name in created_files:
+        search_json = re.search(r'(\d)\.json', file_name)
+        if search_json:
+            server[f'json{search_json.group(1)}'] = file_name
+    return gspread.service_account(server['json2']).open('Notify')
 
 
 def starting_new_lot():
-    global old2
+    global server
     while server.get('link: new_lot_id') is None:
         pass
-    new_lot_id_search = objects.query(server['link: new_lot_id'], r'(\d+?)/')
-    if new_lot_id_search:
-        old2 = int(new_lot_id_search.group(1)) + 1
-    return 'Переменная old2 = ' + str(old2) + ' загружена'
+    search = objects.query(server['link: new_lot_id'], r'(\d+?)/')
+    if search:
+        server['lot_barrier'] = int(search.group(1)) + 1
+    else:
+        server['lot_barrier'] = 0
+    return f"Переменная server['lot_barrier'] = {server['lot_barrier']} загружена"
 
 
 def starting_const_creation():
@@ -56,43 +58,25 @@ def starting_const_creation():
     return 'Константы успешно загружены'
 
 
-def create_server_json_list():
-    global server
-    _server_id = 'cw2'
-    if os.environ.get('server'):
-        _server_id = os.environ['server']
-    created_files = objects.environmental_files(python=True)
-    for file_name in created_files:
-        search_json = re.search(r'(\d)\.json', file_name)
-        if search_json:
-            server['json' + search_json.group(1)] = file_name
-    server['non_emoji_symbols'] = game_objects.symbols
-    _client = gspread.service_account(server['json2'])
-    _spreadsheet = _client.open('Notify')
-    return _client, _server_id, _spreadsheet
-
-
 def starting_active_db_creation():
     global server
     client = Drive(server['json2'])
     files = client.files()
-    folder_id = 'None'
+    folder = 'None'
     while server.get('storage') is None:
         pass
     for file in files:
-        if server['storage'] + '_folder' == file['name']:
-            folder_id = file['id']
+        if file['name'] == f"{server['storage']}_folder":
+            folder = file['id']
             break
     for file in files:
-        if file.get('parents') and folder_id == file['parents'][0]:
-            if file['name'] == re.sub('(.*)/', '', path['lots']):
-                server['lots'] = [file['id'], path['lots']]
-            if file['name'] == re.sub('(.*)/', '', path['storage']):
-                server['storage_file'] = [file['id'], path['storage']]
-            if file['name'] == re.sub('(.*)/', '', path['active']):
-                server['active'] = [file['id'], path['active']]
-                client.download_file(*server['active'])
-    return path['active'] + ' загружен'
+        if file.get('parents') and folder == file['parents'][0]:
+            for key in path:
+                if key in file['name']:
+                    server[f'{key}_file'] = [file['id'], path[key]]
+                    if key == 'active':
+                        client.download_file(*server[f'{key}_file'])
+    return f"{path['active']} загружен"
 
 
 def starting_server_creation():
@@ -100,7 +84,7 @@ def starting_server_creation():
     options = resources.pop(0)
     for option in options:
         for resource in resources:
-            if resource[0] == server_id and option != 'options':
+            if resource[0] == os.environ['server'] and option != 'options':
                 value = resource[options.index(option)]
                 if option == 'DATA_TOKEN':
                     server['TOKEN'] = value
@@ -109,24 +93,12 @@ def starting_server_creation():
                 elif option == 'form':
                     server[option] = literal_eval(re.sub('️', '', value))
                 elif option == 'channel':
-                    server['link: ' + option] = 'https://t.me/' + value + '/'
+                    server[f'link: {option}'] = f'https://t.me/{value}/'
                 elif option == 'new_lot_id':
-                    server['link: ' + option] = 'https://t.me/lot_updater/' + value
+                    server[f'link: {option}'] = f'https://t.me/lot_updater/{value}'
                     server[option] = int(value)
-    if os.environ.get('TOKEN'):
-        server['TOKEN'] = os.environ.get('TOKEN')
     return 'Серверная константа загружена'
-
-
-client1, server_id, spreadsheet = create_server_json_list()
-functions = [starting_const_creation, starting_server_creation]
-objects.concurrent_functions(append_values(functions, [starting_active_db_creation, starting_new_lot]))
-Auth = objects.AuthCentre(server['TOKEN'])
-bot = Auth.start_main_bot('async')
-Mash = Mash(server, const_base)
-dispatcher = Dispatcher(bot)
-# ====================================================================================
-s_message = Auth.start_message(stamp1)
+# ========================================================================================================
 
 
 def drive_updater(drive_client, args, json_path):
@@ -138,170 +110,146 @@ def drive_updater(drive_client, args, json_path):
     return drive_client
 
 
-@dispatcher.edited_channel_post_handler()
-async def detector(message: types.Message):
-    try:
-        if message['chat']['id'] == -1001376067490 and message['message_id'] == server['new_lot_id']:
-            lot, log_text = Mash.detector(message, old2, Auth, db_path=path['active'])
-            print(log_text)
-    except IndexError and Exception:
-        await Auth.async_exec(str(message))
-
-
 def lots_upload():
     drive_client = Drive(server['json4'])
     while True:
         try:
             sleep(20)
             if storage_start is False:
-                printer('начало')
-                drive_client = drive_updater(drive_client, server['lots'], server['json4'])
-                printer('конец')
+                drive_client = drive_updater(drive_client, server['lots_file'], server['json4'])
+                printer(f"{path['lots']} синхронизирован")
         except IndexError and Exception:
-            Auth.thread_exec()
+            ErrorAuth.thread_exec()
 
 
 def lot_updater():
     drive_client = Drive(server['json3'])
-    local_limit = copy(global_limit)
     while True:
         try:
             printer('начало')
-            stamp_updater = time_now()
             db_lots = SQLighter(path['lots'])
             db_active = SQLighter(path['active'])
+            delay, responses = Mash.multiple_requests(global_limit, secure_sql(db_active.get_actives_id))
+            delay -= Mash.multiple_db_updates(responses)
 
-            local_limit = Mash.multiple_requests(global_limit, local_limit)
-
-            point = 0
+            sql_request = ''
             delete_lots_id = []
-            sql_request_line = ''
             start_sql_request = Mash.create_start_sql_request()
-            not_actives = secure_sql(db_active.get_not_actives)
-            for lot in not_actives:
-                point += 1
-                if lot['stamp'] < time_now() - 3 * 60 * 60:
-                    delete_lots_id.append(lot['au_id'])
-                for lot_property in lot:
-                    sql_request_line += "'" + str(lot.get(lot_property)) + "', "
-                sql_request_line = sql_request_line[:-2] + '), ('
-                if point == 1000:
-                    secure_sql(db_lots.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
-                    sql_request_line = ''
-                    point = 0
-            if sql_request_line:
-                secure_sql(db_lots.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
 
-            sql_request_line = ''
+            for lots in sql_divide(secure_sql(db_active.get_ended_lots)):
+                for lot in lots:
+                    if lot['stamp'] < time_now() - 3 * 60 * 60:
+                        delete_lots_id.append(lot['au_id'])
+                    for key in lot:
+                        sql_request += f"'{lot.get(key)}', "
+                    sql_request = f'{sql_request[:-2]}), ('
+                if sql_request:
+                    secure_sql(db_lots.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                    sql_request = ''
+
+            sql_request = ''
             start_sql_request = 'DELETE FROM lots WHERE au_id IN ('
             for au_id in delete_lots_id:
-                sql_request_line += str(au_id) + ', '
-            if sql_request_line:
-                secure_sql(db_active.custom_sql, start_sql_request + sql_request_line[:-2] + ');')
+                sql_request += f'{au_id}, '
+            if sql_request:
+                secure_sql(db_active.custom_sql, f'{start_sql_request}{sql_request[:-2]});')
 
-            if time_now() - stamp_updater <= 4:
-                sleep(4)
-            drive_client = drive_updater(drive_client, server['active'], server['json3'])
+            drive_client = drive_updater(drive_client, server['active_file'], server['json3'])
+            delay = 4 if delay <= 4 else delay
             printer('конец')
+            sleep(delay)
         except IndexError and Exception:
-            Auth.thread_exec()
+            ErrorAuth.thread_exec()
 
 
-def storage():
-    global old2, global_limit, storage_start
+def storage(s_message):
+    global server, global_limit, storage_start
     try:
         old = 0
-        point = 0
         repository = []
+        sql_request = ''
         params_list = {}
-        sql_request_line = ''
+        dev_message = None
         db = SQLighter(path['lots'])
+        client = gspread.service_account(server['json2'])
         start_sql_request = Mash.create_start_sql_request()
-        for s in reversed(client1.list_spreadsheet_files()):
-            if s['name'] in [i + server['storage'] for i in ['', 'temp-']]:
-                for worksheet in client1.open(s['name']).worksheets():
-                    for value in worksheet.col_values(1):
-                        if len(value) > 1:
-                            lot = Mash.form(value, depth='light')
-                            if int(lot['au_id']) > old:
-                                old = int(lot['au_id'])
-                            if lot['base'] != 'None':
-                                if lot['params'] != 'None':
-                                    if lot['params'] not in params_list:
-                                        params_list[lot['params']] = [lot['item_name']]
+        for s in reversed(client.list_spreadsheet_files()):
+            if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
+                for worksheet in client.open(s['name']).worksheets():
+                    for lots in sql_divide(worksheet.col_values(1)):
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+                            futures = []
+                            for future in lots:
+                                futures.append(future_executor.submit(Mash.form, future, depth='light'))
+                            for future in concurrent.futures.as_completed(futures):
+                                lot = future.result()
+                                if lot:
+                                    old = lot['au_id'] if lot['au_id'] > old else old
+                                    if lot['base'] != 'None':
+                                        sql_lot = ''
+                                        if lot['params'] != 'None':
+                                            if lot['params'] not in params_list:
+                                                params_list[lot['params']] = [lot['item_name']]
+                                            else:
+                                                if lot['item_name'] not in params_list[lot['params']]:
+                                                    params_list[lot['params']].append(lot['item_name'])
+                                        for key in lot:
+                                            sql_lot += f"'{lot.get(key)}', "
+                                        sql_request += f'{sql_lot[:-2]}), ('
                                     else:
-                                        if lot['item_name'] not in params_list[lot['params']]:
-                                            params_list[lot['params']].append(lot['item_name'])
-                                for lot_property in lot:
-                                    if lot_property != 'raw':
-                                        sql_request_line += "'" + str(lot.get(lot_property)) + "', "
-                                sql_request_line = sql_request_line[:-2] + '), ('
-                                point += 1
-                                if point == 1000:
-                                    secure_sql(db.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
-                                    sql_request_line = ''
-                                    point = 0
-                            else:
-                                repository.append(lot)
-                    if sql_request_line:
-                        secure_sql(db.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
-                        sql_request_line = ''
-                        point = 0
-        for lot in repository:
-            params_item_names = params_list.get(lot['params'])
-            if params_item_names:
-                for item_name in params_item_names:
-                    if item_name in lot['item_name']:
+                                        repository.append(lot)
+                        if sql_request:
+                            secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                            sql_request = ''
+        for lots in sql_divide(repository):
+            for lot in lots:
+                params_item_names = params_list.get(lot['params'])
+                if params_item_names:
+                    for item_name in params_item_names:
+                        if item_name in lot['item_name']:
+                            lot = Mash.engrave(item_name, lot)
+                            break
+                if lot['base'] == 'None':
+                    names = []
+                    for item_name in const_base:
+                        if item_name in lot['item_name'] \
+                                and const_base[item_name][0] in allowed_lists['engrave']:
+                            names.append(item_name)
+                    if len(names) >= 1:
+                        item_name = names[0]
+                        for name in names:
+                            if len(name) > len(item_name):
+                                item_name = name
                         lot = Mash.engrave(item_name, lot)
-                        break
-            if lot['base'] == 'None':
-                temp = []
-                for item_name in const_base:
-                    if item_name in lot['item_name'] \
-                            and const_base[item_name][0] in allowed_lists['engrave']:
-                        temp.append(item_name)
-                if len(temp) >= 1:
-                    item_name = temp[0]
-                    for temp_name in temp:
-                        if temp_name > item_name:
-                            item_name = temp_name
-                    lot = Mash.engrave(item_name, lot)
-            for lot_property in lot:
-                if lot_property != 'raw':
-                    sql_request_line += "'" + str(lot.get(lot_property)) + "', "
-            sql_request_line = sql_request_line[:-2] + '), ('
-            point += 1
-            if point == 1000:
-                secure_sql(db.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
-                sql_request_line = ''
-                point = 0
-        if sql_request_line:
-            secure_sql(db.custom_sql, start_sql_request + sql_request_line[:-3] + ';')
+                for key in lot:
+                    sql_request += f"'{lot.get(key)}', "
+                sql_request = f'{sql_request[:-2]}), ('
+            if sql_request:
+                secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                sql_request = ''
 
         old += 1
-        if old2 == 0:
-            old2 = old
+        if server['lot_barrier'] == 0:
+            server['lot_barrier'] = old
+        if s_message:
+            dev_message = deepcopy(Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}"))
 
-        dev_message = Auth.edit_dev_message(s_message, '\n' + objects.log_time(tag=code))
         request_array = []
-        global_limit = 150
-        db_active = SQLighter(path['active'])
-        currently_active = secure_sql(db_active.get_all_au_id)
-        for au_id in range(old, old2):
+        currently_active = secure_sql(SQLighter(path['active']).get_all_au_id)
+        for au_id in range(old, server['lot_barrier']):
             if au_id not in currently_active:
                 request_array.append(au_id)
-        Mash.multiple_requests(global_limit, local_limit=150, request_array=request_array, storage=True)
-        if len(dict(dev_message.json).get('text').split('\n')) < 4:
-            Auth.send_json(str(s_message), 's_message', 'Проблемы с записью последовательностей')
-            Auth.send_json(str(dev_message), 'dev_message', 'Проблемы с записью последовательностей')
-        Auth.edit_dev_message(dev_message, '\n' + objects.log_time(tag=code))
+        delay, responses = Mash.multiple_requests(global_limit, request_array)
+        Mash.multiple_db_updates(responses, lot_updater=False)
+        if dev_message:
+            Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
         printer('закончил работу')
         storage_start = False
         sleep(60)
         global_limit = 300
         _thread.exit()
     except IndexError and Exception:
-        Auth.thread_exec()
+        ErrorAuth.thread_exec()
 
 
 def messages():
@@ -314,9 +262,9 @@ def messages():
                 printer('начало')
                 qualities = ['None']
                 db = SQLighter(path['lots'])
-                client2 = gspread.service_account(server['json2'])
+                client = gspread.service_account(server['json2'])
                 qualities = append_values(qualities, secure_sql(db.get_dist_quality))
-                const_items = client2.open('Notify').worksheet('items').get('A1:B50000', major_dimension='ROWS')
+                const_items = client.open('Notify').worksheet('items').get('A1:B50000', major_dimension='ROWS')
                 temp_base = {re.sub('️', '', item[0]): item[1] for item in const_items}
                 const_reversed_base = {value: key for key, value in temp_base.items()}
                 time_week = time_now() - (7 * 24 * 60 * 60)
@@ -407,36 +355,49 @@ def messages():
                 drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
                 printer('конец')
             except IndexError and Exception:
-                Auth.thread_exec()
+                ErrorAuth.thread_exec()
 
 
-@dispatcher.message_handler()
-async def repeat_all_messages(message: types.Message):
+server = {}
+const_base = {}
+global_limit = 300
+storage_start = True
+clear_stats = {'costs_list_full': [], 'costs_list_week': [],
+               'unsold_count_full': 0, 'unsold_count_week': 0,
+               'cancelled_count_full': 0, 'cancelled_count_week': 0}
+functions = [starting_const_creation, starting_server_creation, starting_active_db_creation, starting_new_lot]
+ErrorAuth = objects.AuthCentre(os.environ['ERROR-TOKEN'])
+Auth = objects.AuthCentre(os.environ['DEV-TOKEN'])
+spreadsheet = create_server_json_list()
+objects.concurrent_functions(functions)
+# ========================================================================================================
+bot = objects.AuthCentre(server['TOKEN']).start_main_bot('async')
+Mash = Mash(server, const_base)
+dispatcher = Dispatcher(bot)
+
+
+@dispatcher.edited_channel_post_handler()
+async def detector(message: types.Message):
     try:
-        if message['chat']['id'] != idMe:
-            await bot.send_message(message['chat']['id'], 'К тебе этот бот не имеет отношения, уйди пожалуйста')
-        else:
-            if message['text'].lower().startswith('/log'):
-                modified = re.sub('/log_', '', message['text'].lower())
-                if modified.startswith('s'):
-                    doc = open(path['storage'], 'rb')
-                elif modified.startswith('a'):
-                    doc = open(path['active'], 'rb')
-                else:
-                    doc = open('log.txt', 'rt')
-                await bot.send_document(idMe, doc)
-            elif message['text'].lower().startswith('/lots'):
-                size = round(os.path.getsize(path['lots']) / (1024 * 1024), 2)
-                text_size = 'Размер (' + code(path['lots']) + '): ' + bold(size) + ' MB'
-                await bot.send_message(message['chat']['id'], text_size, parse_mode='HTML')
-            else:
-                await bot.send_message(message['chat']['id'], 'Я работаю', reply_markup=None)
+        if message['chat']['id'] == -1001376067490 and message['message_id'] == server['new_lot_id']:
+            Mash.detector(message, server['lot_barrier'], Auth, db_path=path['active'])
     except IndexError and Exception:
-        await Auth.async_exec(str(message))
+        await ErrorAuth.async_exec(str(message))
 
 
-if __name__ == '__main__':
-    threads = [storage, lot_updater, lots_upload, messages]
+def start(stamp):
+    start_message = None
+    threads = [lot_updater, lots_upload, messages]
+    if os.environ.get('server') != 'local':
+        start_message = Auth.start_message(stamp)
+        threads = [lot_updater, lots_upload, messages]
+    _thread.start_new_thread(storage, start_message)
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
     executor.start_polling(dispatcher)
+
+    ErrorAuth.start_message(stamp, f"\nОшибка с переменными окружения.\n{bold('Бот выключен')}")
+
+
+if os.environ.get('server') == 'local':
+    start(time_now())
