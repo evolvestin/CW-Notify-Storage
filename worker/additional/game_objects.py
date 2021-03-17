@@ -79,7 +79,7 @@ class Mash:
 
     def former(self, request, white_list):
         response = {}
-        soup = BeautifulSoup(request.content, 'html.parser')
+        soup = BeautifulSoup(request.text, features='html5lib')
         for post in soup.find_all('div', class_='tgme_widget_message'):
             get_au_id = post.get('data-post')
             if get_au_id:
