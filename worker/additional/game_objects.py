@@ -79,7 +79,7 @@ class Mash:
 
     def former(self, request, white_list):
         response = {}
-        soup = BeautifulSoup(request.text, 'html.parser')
+        soup = BeautifulSoup(request.content, 'html.parser')
         for post in soup.find_all('div', class_='tgme_widget_message'):
             get_au_id = post.get('data-post')
             if get_au_id:
@@ -255,15 +255,11 @@ class Mash:
                 limit -= 1
 
             temp_array = deepcopy(update_array)
-            import _thread
-            print(update_array)
             print_text, stamp = f"{len(links)}: ", datetime.now().timestamp()
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
                 futures = [future_executor.submit(requests.get, future) for future in links]
                 for future in concurrent.futures.as_completed(futures):
                     result = self.former(future.result(), active_array)
-                    print(result)
-                    _thread.exit()
                     response.update(result)
                     for lot_id in result:
                         if lot_id in temp_array:
@@ -271,7 +267,6 @@ class Mash:
 
             update_array = []
             objects.printer(f"{print_text}{datetime.now().timestamp() - stamp}")
-            print('temp_array', temp_array)
             for lot_id in temp_array:
                 if lot_id is not None:
                     update_array.append(lot_id)
