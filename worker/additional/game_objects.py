@@ -267,6 +267,7 @@ class Mash:
 
             update_array = []
             objects.printer(f"{print_text}{datetime.now().timestamp() - stamp}")
+            print('temp_array', temp_array)
             for lot_id in temp_array:
                 if lot_id is not None:
                     update_array.append(lot_id)
