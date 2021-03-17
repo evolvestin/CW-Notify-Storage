@@ -386,6 +386,8 @@ async def detector(message: types.Message):
 
 
 def start(stamp):
+    from test_req import glow
+    glow()
     start_message = None
     threads = [lot_updater, lots_upload, messages]
     if os.environ.get('server') != 'local':
