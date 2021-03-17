@@ -365,7 +365,7 @@ def messages():
 
 server = {}
 const_base = {}
-max_workers = 1
+max_workers = 5
 global_limit = 100
 storage_start = True
 clear_stats = {'costs_list_full': [], 'costs_list_week': [],
