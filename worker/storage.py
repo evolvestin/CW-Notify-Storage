@@ -154,7 +154,8 @@ def lot_updater():
             if sql_request:
                 secure_sql(db_active.custom_sql, f'{start_sql_request}{sql_request[:-2]});')
 
-            drive_client = drive_updater(drive_client, server['active_file'], server['json3'])
+            if os.environ.get('server') != 'local':
+                drive_client = drive_updater(drive_client, server['active_file'], server['json3'])
             delay = 4 if delay <= 4 else delay
             sleep(delay)
         except IndexError and Exception:
