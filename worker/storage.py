@@ -177,11 +177,8 @@ def storage(s_message):
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 for worksheet in client.open(s['name']).worksheets():
-                    stamp = datetime.now().timestamp()
-                    values = sql_divide(worksheet.col_values(1))
-                    print(f'worksheet-{worksheet.title}-sql_divide(values)', datetime.now().timestamp() - stamp)
-                    stamp = datetime.now().timestamp()
-                    for lots in values:
+                    for lots in sql_divide(worksheet.col_values(1)):
+                        stamp = datetime.now().timestamp()
                         with concurrent.futures.ThreadPoolExecutor(max_workers=9) as future_executor:
                             futures = []
                             for future in lots:
@@ -203,10 +200,10 @@ def storage(s_message):
                                         sql_request += f'{sql_lot[:-2]}), ('
                                     else:
                                         repository.append(lot)
+                        print(f'worksheet-{worksheet.title}-processed', datetime.now().timestamp() - stamp)
                         if sql_request:
                             secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                             sql_request = ''
-                    print(f'worksheet-{worksheet.title}-processed', datetime.now().timestamp() - stamp)
         for lots in sql_divide(repository):
             for lot in lots:
                 params_item_names = params_list.get(lot['params'])
