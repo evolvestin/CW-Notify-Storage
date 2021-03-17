@@ -169,6 +169,7 @@ def storage(s_message):
         repository = []
         sql_request = ''
         params_list = {}
+        printer('начало')
         dev_message = None
         db = SQLighter(path['lots'])
         client = gspread.service_account(server['json2'])
@@ -176,6 +177,7 @@ def storage(s_message):
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 for worksheet in client.open(s['name']).worksheets():
+                    print('worksheet', worksheet.id)
                     for lots in sql_divide(worksheet.col_values(1)):
                         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
                             futures = []

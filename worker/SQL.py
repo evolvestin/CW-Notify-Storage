@@ -20,10 +20,10 @@ class SQLighter:
                 print(lot)
 
     def merge(self, dictionary):
-        sql_request = f'INSERT OR REPLACE INTO lots '
+        sql_request = f'INSERT OR REPLACE INTO lots ('
         for key in dictionary:
             sql_request += f'{key}, '
-        sql_request = f'({sql_request[:-2]}) VALUES ('
+        sql_request = f'{sql_request[:-2]}) VALUES ('
         for key in dictionary:
             sql_request += f"'{dictionary.get(key)}', "
         with self.connection:
