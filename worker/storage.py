@@ -126,11 +126,11 @@ def lot_updater():
     drive_client = Drive(server['json3'])
     while True:
         try:
-            printer('начало')
             db_lots = SQLighter(path['lots'])
             db_active = SQLighter(path['active'])
-            delay, responses = Mash.multiple_requests(global_limit, secure_sql(db_active.get_actives_id))
-            delay -= Mash.multiple_db_updates(responses)
+            actives = secure_sql(db_active.get_actives_id)
+            delay, responses = Mash.multiple_requests(actives, global_limit, max_workers)
+            delay -= Mash.multiple_db_updates(responses, max_workers)
 
             sql_request = ''
             delete_lots_id = []
@@ -156,14 +156,14 @@ def lot_updater():
 
             drive_client = drive_updater(drive_client, server['active_file'], server['json3'])
             delay = 4 if delay <= 4 else delay
-            printer('конец')
             sleep(delay)
         except IndexError and Exception:
             ErrorAuth.thread_exec()
 
 
 def storage(s_message):
-    global server, global_limit, storage_start
+    from datetime import datetime
+    global server, max_workers, global_limit, storage_start
     try:
         old = 0
         repository = []
@@ -177,9 +177,9 @@ def storage(s_message):
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 for worksheet in client.open(s['name']).worksheets():
-                    print('worksheet', worksheet.id)
+                    stamp = datetime.now().timestamp()
                     for lots in sql_divide(worksheet.col_values(1)):
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=9) as future_executor:
                             futures = []
                             for future in lots:
                                 futures.append(future_executor.submit(Mash.form, future, depth='light'))
@@ -203,6 +203,7 @@ def storage(s_message):
                         if sql_request:
                             secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                             sql_request = ''
+                    print(f'worksheet-{worksheet.title}', datetime.now().timestamp() - stamp)
         for lots in sql_divide(repository):
             for lot in lots:
                 params_item_names = params_list.get(lot['params'])
@@ -241,14 +242,15 @@ def storage(s_message):
         for au_id in range(old, server['lot_barrier']):
             if au_id not in currently_active:
                 request_array.append(au_id)
-        delay, responses = Mash.multiple_requests(global_limit, request_array)
+        delay, responses = Mash.multiple_requests(request_array, full_limit=200)
         Mash.multiple_db_updates(responses, lot_updater=False)
         if dev_message:
-            Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
+            Auth.edit_dev_message(dev_message, f"\n{log_time(tag=code)}")
         printer('закончил работу')
         storage_start = False
         sleep(60)
         global_limit = 300
+        max_workers = 10
         _thread.exit()
     except IndexError and Exception:
         ErrorAuth.thread_exec()
@@ -362,7 +364,8 @@ def messages():
 
 server = {}
 const_base = {}
-global_limit = 300
+max_workers = 1
+global_limit = 100
 storage_start = True
 clear_stats = {'costs_list_full': [], 'costs_list_week': [],
                'unsold_count_full': 0, 'unsold_count_week': 0,
@@ -389,7 +392,7 @@ async def detector(message: types.Message):
 
 def start(stamp):
     start_message = None
-    threads = [lot_updater, lots_upload, messages]
+    threads = [lot_updater]
     if os.environ.get('server') != 'local':
         start_message = Auth.start_message(stamp)
         threads = [lot_updater, lots_upload, messages]

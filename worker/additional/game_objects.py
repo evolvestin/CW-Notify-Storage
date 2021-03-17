@@ -115,13 +115,13 @@ class Mash:
         objects.printer(print_text)
         return lot, log_text
 
-    def multiple_db_updates(self, lots, lot_updater=True):
+    def multiple_db_updates(self, lots, lot_updater=True, max_workers=10):
         start_sql_request = self.create_start_sql_request()
         print_text, stamp = f"{len(lots)}: ", datetime.now().timestamp()
         db = {'active': SQLighter(path['active']), 'lots': None if lot_updater else SQLighter(path['lots'])}
         for array in objects.sql_divide(lots):
             sql = {'active': '', 'lots': ''}
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as future_executor:
                 futures = [future_executor.submit(self.form, future) for future in array]
                 for future in concurrent.futures.as_completed(futures):
                     sql_request = ''
@@ -207,7 +207,7 @@ class Mash:
                 lot['modifiers'] = lot['modifiers'][:-1]
         return lot
 
-    def multiple_requests(self, full_limit, active_array):
+    def multiple_requests(self, active_array, full_limit, max_workers=10):
         stuck = 0
         loop = True
         ranges = []
@@ -256,7 +256,7 @@ class Mash:
 
             temp_array = deepcopy(update_array)
             print_text, stamp = f"{len(links)}: ", datetime.now().timestamp()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as future_executor:
                 futures = [future_executor.submit(requests.get, future) for future in links]
                 for future in concurrent.futures.as_completed(futures):
                     result = self.former(future.result(), active_array)
