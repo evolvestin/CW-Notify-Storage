@@ -255,11 +255,15 @@ class Mash:
                 limit -= 1
 
             temp_array = deepcopy(update_array)
+            import _thread
+            print(update_array)
             print_text, stamp = f"{len(links)}: ", datetime.now().timestamp()
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
                 futures = [future_executor.submit(requests.get, future) for future in links]
                 for future in concurrent.futures.as_completed(futures):
                     result = self.former(future.result(), active_array)
+                    print(result)
+                    _thread.exit()
                     response.update(result)
                     for lot_id in result:
                         if lot_id in temp_array:
