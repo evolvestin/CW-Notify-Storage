@@ -178,10 +178,10 @@ def storage(s_message):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 for worksheet in client.open(s['name']).worksheets():
                     stamp = datetime.now().timestamp()
-                    values = worksheet.col_values(1)
-                    print(f'worksheet-{worksheet.title}-col_values', datetime.now().timestamp() - stamp)
+                    values = sql_divide(worksheet.col_values(1))
+                    print(f'worksheet-{worksheet.title}-sql_divide(values)', datetime.now().timestamp() - stamp)
                     stamp = datetime.now().timestamp()
-                    for lots in sql_divide(values):
+                    for lots in values:
                         with concurrent.futures.ThreadPoolExecutor(max_workers=9) as future_executor:
                             futures = []
                             for future in lots:
