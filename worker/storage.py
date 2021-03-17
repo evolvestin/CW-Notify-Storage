@@ -86,14 +86,14 @@ def starting_server_creation():
         for resource in resources:
             if resource[0] == os.environ['server'] and option != 'options':
                 value = resource[options.index(option)]
+                if option in ['castle_list', 'storage', 'channel']:
+                    server[option] = value
                 if option == 'DATA_TOKEN':
                     server['TOKEN'] = value
-                elif option in ['castle_list', 'storage']:
-                    server[option] = value
                 elif option == 'form':
                     server[option] = literal_eval(re.sub('️', '', value))
                 elif option == 'channel':
-                    server[f'link: {option}'] = f'https://t.me/{value}/'
+                    server[f'link: {option}'] = f'https://t.me/s/{value}/'
                 elif option == 'new_lot_id':
                     server[f'link: {option}'] = f'https://t.me/lot_updater/{value}'
                     server[option] = int(value)
@@ -386,8 +386,6 @@ async def detector(message: types.Message):
 
 
 def start(stamp):
-    from test_req import glow
-    glow()
     start_message = None
     threads = [lot_updater, lots_upload, messages]
     if os.environ.get('server') != 'local':
