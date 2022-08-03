@@ -311,7 +311,7 @@ class Mash:
                     lot['base'] = 'amt'
                 if re.search('ring', lot['item_name']):
                     lot['base'] = 'rng'
-                if re.search('totem', lot['item_name']):
+                if re.search('[Tt]otem', lot['item_name']):
                     lot['base'] = 'ttm'
 
         if lot['params'] != 'None' and lot['base'] == 'None' and depth == 'hard':
