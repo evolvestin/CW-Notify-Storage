@@ -407,7 +407,10 @@ async def detector(message: types.Message):
         if message['chat']['id'] == -1001376067490 and message['message_id'] == server['new_lot_id']:
             Mash.detector(message, server['lot_barrier'], Auth, db_path=path['active'])
     except IndexError and Exception:
-        await ErrorAuth.async_exec(str(message))
+        try:
+            await ErrorAuth.async_exec(str(message))
+        except:
+            pass
 
 
 def start(stamp):
