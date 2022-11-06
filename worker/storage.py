@@ -119,7 +119,10 @@ def lots_upload():
                 drive_client = drive_updater(drive_client, server['lots_file'], server['json4'])
                 printer(f"{path['lots']} синхронизирован")
         except IndexError and Exception:
-            ErrorAuth.thread_exec()
+            try:
+                ErrorAuth.thread_exec()
+            except IndexError and Exception:
+                pass
 
 
 def lot_updater():
@@ -159,7 +162,10 @@ def lot_updater():
             delay = 4 if delay <= 4 else delay
             sleep(delay)
         except IndexError and Exception:
-            ErrorAuth.thread_exec()
+            try:
+                ErrorAuth.thread_exec()
+            except IndexError and Exception:
+                pass
 
 
 def storage(s_message):
@@ -254,7 +260,10 @@ def storage(s_message):
         max_workers = 10
         _thread.exit()
     except IndexError and Exception:
-        ErrorAuth.thread_exec()
+        try:
+            ErrorAuth.thread_exec()
+        except IndexError and Exception:
+            pass
 
 
 def messages():
@@ -360,7 +369,10 @@ def messages():
                 drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
                 printer('конец')
             except IndexError and Exception:
-                ErrorAuth.thread_exec()
+                try:
+                    ErrorAuth.thread_exec()
+                except IndexError and Exception:
+                    pass
 
 
 server = {}
