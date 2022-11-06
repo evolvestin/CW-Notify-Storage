@@ -183,8 +183,13 @@ def storage(s_message):
         start_sql_request = Mash.create_start_sql_request()
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
-                for worksheet in client.open(s['name']).worksheets():
+                sheet, titles = client.open(s['name']), []
+                for i in range(0, 35):
+                    check = sheet.get_worksheet(i)
+                    titles.append(check.title) if check else None
+                for title in titles:
                     stamp = datetime.now().timestamp()
+                    worksheet = sheet.worksheet(title)
                     for lots in sql_divide(worksheet.col_values(1)):
                         with concurrent.futures.ThreadPoolExecutor(max_workers=9) as future_executor:
                             futures = []
