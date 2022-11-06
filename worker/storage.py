@@ -184,6 +184,7 @@ def storage(s_message):
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 sheet, titles = client.open(s['name']), []
+                print('HELLO', server['json2'], s['name'])
                 for i in range(0, 35):
                     check = sheet.get_worksheet(i)
                     titles.append(check.title) if check else None
