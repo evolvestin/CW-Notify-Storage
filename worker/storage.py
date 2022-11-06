@@ -187,6 +187,7 @@ def storage(s_message):
                 for i in range(0, 35):
                     check = sheet.get_worksheet(i)
                     titles.append(check.title) if check else None
+                print(titles)
                 for title in titles:
                     stamp = datetime.now().timestamp()
                     worksheet = sheet.worksheet(title)
