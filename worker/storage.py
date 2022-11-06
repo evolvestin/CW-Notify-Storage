@@ -133,6 +133,7 @@ def lot_updater():
             db_active = SQLighter(path['active'])
             actives = secure_sql(db_active.get_actives_id)
             delay, responses = Mash.multiple_requests(actives, global_limit, max_workers)
+            print('апдейт')
             delay -= Mash.multiple_db_updates(responses, max_workers)
 
             sql_request = ''
