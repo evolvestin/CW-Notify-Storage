@@ -11,6 +11,7 @@ from aiogram import types
 from SQL import SQLighter
 from statistics import mean
 from ast import literal_eval
+from datetime import datetime
 from copy import copy, deepcopy
 from aiogram.utils import executor
 from additional.GDrive import Drive
@@ -126,9 +127,11 @@ def lots_upload():
 
 
 def lot_updater():
+    global glow
     drive_client = Drive(server['json3'])
     while True:
         try:
+            glow = datetime.now().timestamp()
             db_lots = SQLighter(path['lots'])
             db_active = SQLighter(path['active'])
             actives = secure_sql(db_active.get_actives_id)
@@ -401,6 +404,7 @@ objects.concurrent_functions(functions)
 bot = objects.AuthCentre(server['TOKEN']).start_main_bot('async')
 Mash = Mash(server, const_base)
 dispatcher = Dispatcher(bot)
+glow = datetime.now().timestamp()
 
 
 @dispatcher.edited_channel_post_handler()
@@ -415,12 +419,19 @@ async def detector(message: types.Message):
             pass
 
 
+def check():
+    while True:
+        if datetime.now().timestamp() - glow >= 300:
+            print('НОВЫЙ lot_updater')
+            _thread.start_new_thread(lot_updater, ())
+
+
 def start(stamp):
     start_message = None
     threads = [lot_updater]
     if os.environ.get('server') != 'local':
         start_message = Auth.start_message(stamp)
-        threads = [lot_updater, lots_upload, messages]
+        threads = [check, lot_updater, lots_upload, messages]
     _thread.start_new_thread(storage, (start_message,))
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
