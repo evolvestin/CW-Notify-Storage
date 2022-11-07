@@ -232,39 +232,42 @@ class Mash:
 
         while loop is True:
             links = []
-            if len(update_array) == 0:
-                for lot_id in request_array:
-                    if len(update_array) < full_limit and lot_id not in used_array:
-                        update_array.append(lot_id)
-                        used_array.append(lot_id)
-            else:
-                if update_array == prev_update_array:
-                    stuck += 1
+            try:
+                if len(update_array) == 0:
+                    for lot_id in request_array:
+                        if len(update_array) < full_limit and lot_id not in used_array:
+                            update_array.append(lot_id)
+                            used_array.append(lot_id)
                 else:
-                    prev_update_array = deepcopy(update_array)
-                    stuck = 0
-                if stuck in [50, 500, 5000]:
-                    auth = objects.AuthCentre(os.environ['ERROR-TOKEN'])
-                    message = f"active_array({len(active_array)}) = {active_array}\n" \
-                              f"request_array({len(request_array)}) = {request_array}\n" \
-                              f"update_array({len(update_array)}) = {update_array}\n" \
-                              f"delay = {delay}"
-                    auth.send_json(message, 'variables', 'Бесконечный цикл обновляющихся лотов')
+                    if update_array == prev_update_array:
+                        stuck += 1
+                    else:
+                        prev_update_array = deepcopy(update_array)
+                        stuck = 0
+                    if stuck in [50, 500, 5000]:
+                        auth = objects.AuthCentre(os.environ['ERROR-TOKEN'])
+                        message = f"active_array({len(active_array)}) = {active_array}\n" \
+                                  f"request_array({len(request_array)}) = {request_array}\n" \
+                                  f"update_array({len(update_array)}) = {update_array}\n" \
+                                  f"delay = {delay}"
+                        auth.send_json(message, 'variables', 'Бесконечный цикл обновляющихся лотов')
 
-            for lot_id in update_array:
-                links.append(f"{self.server['link: channel']}{lot_id}")
-                limit -= 1
+                for lot_id in update_array:
+                    links.append(f"{self.server['link: channel']}{lot_id}")
+                    limit -= 1
 
-            temp_array = deepcopy(update_array)
-            print_text, stamp = f"{len(links)}: ", datetime.now().timestamp()
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as future_executor:
-                futures = [future_executor.submit(requests.get, future) for future in links]
-                for future in concurrent.futures.as_completed(futures):
-                    result = self.former(future.result(), active_array)
-                    response.update(result)
-                    for lot_id in result:
-                        if lot_id in temp_array:
-                            temp_array[temp_array.index(lot_id)] = None
+                temp_array = deepcopy(update_array)
+                print_text, stamp = f"{len(links)}: ", datetime.now().timestamp()
+                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as future_executor:
+                    futures = [future_executor.submit(requests.get, future) for future in links]
+                    for future in concurrent.futures.as_completed(futures):
+                        result = self.former(future.result(), active_array)
+                        response.update(result)
+                        for lot_id in result:
+                            if lot_id in temp_array:
+                                temp_array[temp_array.index(lot_id)] = None
+            except IndexError and Exception as error:
+                print('ЧТО-ТО НЕ ТАК', error)
 
             update_array = []
             objects.printer(f"{print_text}{datetime.now().timestamp() - stamp}")
@@ -274,6 +277,7 @@ class Mash:
 
             if len(update_array) == 0 and len(used_array) == len(request_array):
                 loop = False
+            print('где', datetime.now().timestamp() - stamp2)
             if datetime.now().timestamp() - stamp2 > 300:
                 loop = False
             if limit <= 0:
