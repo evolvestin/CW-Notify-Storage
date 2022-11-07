@@ -228,6 +228,7 @@ class Mash:
 
         delay = len(request_array) / 5
         delay = int(delay + 1 if delay.is_integer() is False else delay)
+        stamp = datetime.now().timestamp()
 
         while loop is True:
             links = []
@@ -272,6 +273,8 @@ class Mash:
                     update_array.append(lot_id)
 
             if len(update_array) == 0 and len(used_array) == len(request_array):
+                loop = False
+            if datetime.now().timestamp() - stamp > 300:
                 loop = False
             if limit <= 0:
                 limit = copy(full_limit)
