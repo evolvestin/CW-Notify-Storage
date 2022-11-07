@@ -5,6 +5,8 @@ import codecs
 import gspread
 import objects
 import _thread
+import random
+import string
 from time import sleep
 import concurrent.futures
 from aiogram import types
@@ -129,9 +131,15 @@ def lots_upload():
 def lot_updater():
     global glow
     drive_client = Drive(server['json3'])
+    title = ''.join(random.sample(string.ascii_letters, 4))
+    glow[title] = datetime.now().timestamp()
+    print('lot_updater KEY =', title)
     while True:
         try:
-            glow = datetime.now().timestamp()
+            if glow.get(title):
+                glow[title] = datetime.now().timestamp()
+            else:
+                _thread.exit()
             db_lots = SQLighter(path['lots'])
             db_active = SQLighter(path['active'])
             actives = secure_sql(db_active.get_actives_id)
@@ -404,7 +412,7 @@ objects.concurrent_functions(functions)
 bot = objects.AuthCentre(server['TOKEN']).start_main_bot('async')
 Mash = Mash(server, const_base)
 dispatcher = Dispatcher(bot)
-glow = datetime.now().timestamp()
+glow = {}
 
 
 @dispatcher.edited_channel_post_handler()
@@ -421,9 +429,14 @@ async def detector(message: types.Message):
 
 def check():
     while True:
-        if datetime.now().timestamp() - glow >= 300:
-            print('НОВЫЙ lot_updater')
+        for key, value in glow.values():
+            if datetime.now().timestamp() - value >= 200:
+                print('удалили', key)
+                glow.pop(key)
+        if len(glow) == 0:
             _thread.start_new_thread(lot_updater, ())
+            print('НОВЫЙ lot_updater')
+        sleep(10)
 
 
 def start(stamp):
@@ -431,7 +444,7 @@ def start(stamp):
     threads = [lot_updater]
     if os.environ.get('server') != 'local':
         start_message = Auth.start_message(stamp)
-        threads = [check, lot_updater, lots_upload, messages]
+        threads = [check, lots_upload, messages]
     _thread.start_new_thread(storage, (start_message,))
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
