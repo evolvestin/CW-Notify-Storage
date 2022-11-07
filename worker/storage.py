@@ -429,7 +429,7 @@ async def detector(message: types.Message):
 
 def check():
     while True:
-        for key, value in glow.values():
+        for key, value in glow.items():
             if datetime.now().timestamp() - value >= 200:
                 print('удалили', key)
                 glow.pop(key)
