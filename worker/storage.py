@@ -429,14 +429,17 @@ async def detector(message: types.Message):
 
 def check():
     while True:
-        for key, value in glow.items():
-            if datetime.now().timestamp() - value >= 200:
-                print('удалили', key)
-                glow.pop(key)
-        if len(glow) == 0:
-            _thread.start_new_thread(lot_updater, ())
-            print('НОВЫЙ lot_updater')
-        sleep(10)
+        try:
+            for key, value in glow.items():
+                if datetime.now().timestamp() - value >= 200:
+                    print('удалили', key)
+                    glow.pop(key)
+            if len(glow) == 0:
+                _thread.start_new_thread(lot_updater, ())
+                print('НОВЫЙ lot_updater')
+            sleep(10)
+        except:
+            pass
 
 
 def start(stamp):
