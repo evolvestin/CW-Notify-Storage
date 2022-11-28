@@ -1,15 +1,15 @@
 import os
 import re
-import objects
 import requests
 from time import sleep
 from SQL import SQLighter
 import concurrent.futures
+import functions as objects
 from bs4 import BeautifulSoup
 from datetime import datetime
 from collections import Counter
 from copy import copy, deepcopy
-from objects import bold, code, secure_sql
+from functions import bold, code, secure_sql
 allowed_lists = {'engrave': ['a', 'w'], 'params': ['a', 'w', 'e']}
 symbols = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#?$%&='*\[\]+.^{}()`⚡|~@:;/\\]"
 path = {'lots': 'db/lots.db', 'active': 'db/active.db', 'storage': 'storage.json'}
@@ -267,6 +267,8 @@ class Mash:
                             if lot_id in temp_array:
                                 temp_array[temp_array.index(lot_id)] = None
             except IndexError and Exception as error:
+                temp_array = []
+                print_text, stamp = '', datetime.now().timestamp()
                 print('ЧТО-ТО НЕ ТАК', error)
 
             update_array = []
