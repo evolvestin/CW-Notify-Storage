@@ -244,7 +244,7 @@ class Mash:
                     else:
                         prev_update_array = deepcopy(update_array)
                         stuck = 0
-                    if stuck in [50, 500, 5000]:
+                    if stuck in [500, 5000]:
                         auth = objects.AuthCentre(os.environ['ERROR-TOKEN'])
                         message = f"active_array({len(active_array)}) = {active_array}\n" \
                                   f"request_array({len(request_array)}) = {request_array}\n" \
