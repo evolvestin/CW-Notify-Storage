@@ -118,8 +118,10 @@ class Mash:
     def multiple_db_updates(self, lots, lot_updater=True, max_workers=10):
         start_sql_request = self.create_start_sql_request()
         print_text, stamp = f"{len(lots)}: ", datetime.now().timestamp()
+        print('почалось тут')
         db = {'active': SQLighter(path['active']), 'lots': None if lot_updater else SQLighter(path['lots'])}
         for array in objects.sql_divide(lots):
+            print('array')
             sql = {'active': '', 'lots': ''}
             with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as future_executor:
                 futures = [future_executor.submit(self.form, future) for future in array]
