@@ -241,6 +241,9 @@ def storage(s_message):
                         if sql_request:
                             secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                             sql_request = ''
+                    if s_message:
+                        dev_message = deepcopy(Auth.edit_dev_message(
+                            s_message, f"\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}"))
                     print(f'worksheet-{worksheet.title}', datetime.now().timestamp() - stamp)
         for lots in sql_divide(repository):
             for lot in lots:
