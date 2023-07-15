@@ -149,6 +149,7 @@ def lot_updater():
             delay, responses = Mash.multiple_requests(actives, global_limit, max_workers)
             print('апдейт')
             delay -= Mash.multiple_db_updates(responses, max_workers)
+            print('залили в базу')
 
             sql_request = ''
             delete_lots_id = []
