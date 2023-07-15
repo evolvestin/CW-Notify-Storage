@@ -138,7 +138,9 @@ class Mash:
                 for key in sql:
                     sql_request += sql[key]
                 if sql_request:
+                    print('обновляем док локал в базе', 'active')
                     secure_sql(db['active'].custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                    print('обновили  док локал в базе', 'active')
             else:
                 for key in db:
                     if db[key] and sql[key]:
