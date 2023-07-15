@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 import re
+import sys
 import codecs
 import random
 import string
 import gspread
 import _thread
+import traceback
 from time import sleep
 import concurrent.futures
 from aiogram import types
@@ -175,6 +177,9 @@ def lot_updater():
             delay = 4 if delay <= 4 else delay
             sleep(delay)
         except IndexError and Exception:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            error_raw = traceback.format_exception(exc_type, exc_value, exc_traceback)
+            print(''.join(error_raw))
             try:
                 ErrorAuth.thread_exec()
             except IndexError and Exception:
