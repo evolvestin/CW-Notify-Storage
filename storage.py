@@ -165,6 +165,8 @@ def lot_updater():
                     secure_sql(db_lots.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                     sql_request = ''
 
+            print('добавили лоты')
+
             sql_request = ''
             start_sql_request = 'DELETE FROM lots WHERE au_id IN ('
             for au_id in delete_lots_id:
@@ -172,8 +174,11 @@ def lot_updater():
             if sql_request:
                 secure_sql(db_active.custom_sql, f'{start_sql_request}{sql_request[:-2]});')
 
+            print('удалили лоты')
+
             if os.environ.get('server') != 'local':
                 drive_client = drive_updater(drive_client, server['active_file'], server['json3'])
+                print('обновили файл')
             delay = 4 if delay <= 4 else delay
             sleep(delay)
         except IndexError and Exception:
