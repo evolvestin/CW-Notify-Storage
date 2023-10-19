@@ -194,7 +194,8 @@ def lot_uploader():
             stamp = datetime.now().timestamp()
             now, db_active, delete_lots_id = time_now(), SQLighter(path['active']), []
             for lot in secure_sql(db_active.get_ended_lots):
-                delete_lots_id.append(str(lot['au_id'])) if lot['stamp'] < now - 600 else None
+                if lot['status'] != '#active' and lot['stamp'] < now - 600:
+                    delete_lots_id.append(str(lot['au_id']))
 
             if delete_lots_id:
                 secure_sql(db_active.custom_sql, f"DELETE FROM lots WHERE au_id IN ({', '.join(delete_lots_id)});")
