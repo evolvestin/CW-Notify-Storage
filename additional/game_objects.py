@@ -35,6 +35,13 @@ class Mash:
             sql_request += f'{column_name}, '
         return f'{sql_request[:-2]}) VALUES ('
 
+    def update_db_lot(self, update: str) -> None:
+        lot = self.form(update)
+        keys = ', '.join([f"'{key}'" for key in lot.keys()])
+        values = ', '.join([f"'{value}'" for value in lot.values()])
+        for table in ['lots', 'active']:
+            secure_sql(SQLighter(path[table]).custom_sql, f"INSERT OR REPLACE INTO lots ({keys}) VALUES ({values});")
+
     @staticmethod
     def time(stamp, lang=None):
         day = 0
