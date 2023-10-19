@@ -39,7 +39,7 @@ class SQLighter:
 
     def get_actives_id(self):
         with self.connection:
-            result = self.cursor.execute("SELECT au_id FROM lots WHERE status = '#active'")
+            result = self.cursor.execute('SELECT au_id FROM lots')
         result_array = []
         for lot in result:
             result_array.append(lot['au_id'])

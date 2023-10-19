@@ -106,6 +106,13 @@ def starting_server_creation():
 # =====================================================================================================================
 
 
+def error_handler():
+    try:
+        ErrorAuth.executive(None)
+    except IndexError and Exception:
+        pass
+
+
 def drive_updater(drive_client, args, json_path):
     try:
         drive_client.update_file(*args)
@@ -115,28 +122,68 @@ def drive_updater(drive_client, args, json_path):
     return drive_client
 
 
+async def update_lots(client: TelegramClient, ids: list) -> None:
+    messages = await client.get_messages(server['channel'], ids=ids)
+    for message in messages:
+        if message and message.id and message.message:
+            Mash.update_db_lot(f"{message.id}/{re.sub('/', '&#47;', message.message)}".replace('\n', '/'))
+
+
+def lot_database_updater():
+    global updates
+    while True:
+        try:
+            Mash.update_db_lot(updates.pop(0)) if updates else None
+            sleep(0.05)
+        except IndexError and Exception:
+            error_handler()
+
+
 def lot_detector():
     global updates
     try:
         asyncio.set_event_loop(asyncio.new_event_loop())
-        telegram_client = TelegramClient(
-            os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash']).start()
-        with telegram_client:
-            printer(f"detector() в работе: {server['channel']}")
-
-            @telegram_client.on(events.NewMessage(chats=server['channel']))
-            @telegram_client.on(events.MessageEdited(chats=server['channel']))
+        client = TelegramClient(
+            os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash'])
+        with client:
+            @client.on(events.NewMessage(chats=server['channel']))
+            @client.on(events.MessageEdited(chats=server['channel']))
             async def handler(response):
                 if response.message and response.message.id and response.message.message:
                     upd = f"{response.message.id}/{re.sub('/', '&#47;', response.message.message)}".replace('\n', '/')
                     updates.append(upd), printer(f'Обновление: {upd}')
-            telegram_client.run_until_disconnected()
+            printer(f"detector() в работе: {server['channel']}")
+            client.run_until_disconnected()
     except IndexError and Exception:
-        try:
-            ErrorAuth.executive(None)
-        except IndexError and Exception:
-            pass
+        error_handler()
         _thread.start_new_thread(lot_detector, ())
+
+
+def lot_telegram_updater():
+    global lot_telegram_updater_closed
+    try:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        client = TelegramClient(
+            os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash'])
+    except IndexError and Exception:
+        error_handler()
+        printer('Вылет lot_telegram_updater(), ждем 20 сек и перезапускаем')
+        sleep(20)
+        _thread.start_new_thread(lot_telegram_updater, ())
+        _thread.exit()
+    printer('Запуск lot_telegram_updater()')
+    while True:
+        try:
+            actives = secure_sql(SQLighter(path['active']).get_actives_id)
+            with client:
+                client.loop.run_until_complete(update_lots(client, actives))
+            if storage_lock is True:
+                printer('Завершаем lot_telegram_updater() до окончания обновления лотов в storage()')
+                lot_telegram_updater_closed = True
+                _thread.exit()
+            sleep(8)
+        except IndexError and Exception:
+            error_handler()
 
 
 def lot_uploader():
@@ -147,160 +194,25 @@ def lot_uploader():
             stamp = datetime.now().timestamp()
             now, db_active, delete_lots_id = time_now(), SQLighter(path['active']), []
             for lot in secure_sql(db_active.get_ended_lots):
-                delete_lots_id.append(str(lot['au_id'])) if lot['stamp'] < now - 3 * 60 * 60 else None
+                delete_lots_id.append(str(lot['au_id'])) if lot['stamp'] < now - 600 else None
 
             if delete_lots_id:
                 secure_sql(db_active.custom_sql, f"DELETE FROM lots WHERE au_id IN ({', '.join(delete_lots_id)});")
 
             if os.environ.get('server') != 'local':
                 drive_active = drive_updater(drive_active, server['active_file'], server['json3'])
-                printer(f"{path['active']} синхронизирован")
                 if storage_start is False and counter >= 5:
+                    printer(f"{path['active']} синхронизирован, {counter} раз")
                     counter, drive_lots = 0, drive_updater(drive_lots, server['lots_file'], server['json4'])
                     printer(f"{path['lots']} синхронизирован")
 
             delay = 4 - (datetime.now().timestamp() - stamp)
-            print('задержка', 0 if delay < 0 else delay, 'counter', counter)
             sleep(0 if delay < 0 else delay)
         except IndexError and Exception:
-            try:
-                ErrorAuth.executive(None)
-            except IndexError and Exception:
-                pass
+            error_handler()
 
 
-def lot_updater():
-    global updates
-    while True:
-        try:
-            Mash.update_db_lot(updates.pop(0)) if updates else None
-            sleep(0.05)
-        except IndexError and Exception:
-            try:
-                ErrorAuth.executive(None)
-            except IndexError and Exception:
-                pass
-
-
-def storage(s_message):
-    async def not_stored_handler(ids: list) -> None:
-        messages_array = await telegram_client.get_messages(server['channel'], ids=ids)
-        print('сообщения получены,', len(messages_array))
-        for message in messages_array:
-            if message and message.id and message.message:
-                Mash.update_db_lot(f"{message.id}/{re.sub('/', '&#47;', message.message)}".replace('\n', '/'))
-
-    global server, storage_start
-    try:
-        old = 0
-        repository = []
-        sql_request = ''
-        params_list = {}
-        printer('начало')
-        db = SQLighter(path['lots'])
-        client = gspread.service_account(server['json2'])
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        start_sql_request = Mash.create_start_sql_request()
-        telegram_client = TelegramClient(
-            os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash']).start()
-        for s in reversed(client.list_spreadsheet_files()):
-            if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
-                sheet, titles = client.open(s['name']), []
-                print('HELLO', server['json2'], s['name'])
-                for i in range(0, 35):
-                    checker = sheet.get_worksheet(i)
-                    titles.append(checker.title) if checker else None
-                print(titles)
-                for title in titles:
-                    stamp = datetime.now().timestamp()
-                    worksheet = sheet.worksheet(title)
-                    for lots in sql_divide(worksheet.col_values(1)):
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
-                            futures = []
-                            for future in lots:
-                                futures.append(future_executor.submit(Mash.form, future, depth='light'))
-                            for future in concurrent.futures.as_completed(futures):
-                                lot = future.result()
-                                if lot:
-                                    old = lot['au_id'] if lot['au_id'] > old else old
-                                    if lot['base'] != 'None':
-                                        sql_lot = ''
-                                        if lot['params'] != 'None':
-                                            if lot['params'] not in params_list:
-                                                params_list[lot['params']] = [lot['item_name']]
-                                            else:
-                                                if lot['item_name'] not in params_list[lot['params']]:
-                                                    params_list[lot['params']].append(lot['item_name'])
-                                        for key in lot:
-                                            sql_lot += f"'{lot.get(key)}', "
-                                        sql_request += f'{sql_lot[:-2]}), ('
-                                    else:
-                                        repository.append(lot)
-                        if sql_request:
-                            secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
-                            sql_request = ''
-                    if s_message:
-                        s_message = deepcopy(Auth.edit_dev_message(
-                            s_message, f"\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}"))
-                    print(f'worksheet-{worksheet.title}', datetime.now().timestamp() - stamp)
-        for lots in sql_divide(repository):
-            for lot in lots:
-                params_item_names = params_list.get(lot['params'])
-                if params_item_names:
-                    for item_name in params_item_names:
-                        if item_name in lot['item_name']:
-                            lot = Mash.engrave(item_name, lot)
-                            break
-                if lot['base'] == 'None':
-                    names = []
-                    for item_name in const_base:
-                        if item_name in lot['item_name'] \
-                                and const_base[item_name][0] in allowed_lists['engrave']:
-                            names.append(item_name)
-                    if len(names) >= 1:
-                        item_name = names[0]
-                        for name in names:
-                            if len(name) > len(item_name):
-                                item_name = name
-                        lot = Mash.engrave(item_name, lot)
-                for key in lot:
-                    sql_request += f"'{lot.get(key)}', "
-                sql_request = f'{sql_request[:-2]}), ('
-            if sql_request:
-                secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
-                sql_request = ''
-
-        old += 1 - 3000#временно -3000
-        if server['lot_barrier'] == 0:
-            server['lot_barrier'] = old
-        if s_message:
-            s_message = deepcopy(Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}"))
-
-        try:
-            not_stored = range(old, server['lot_barrier'] + 1)
-            print('DIFF', not_stored)
-            with telegram_client:
-                telegram_client.loop.run_until_complete(not_stored_handler(list(not_stored)))
-        except IndexError and Exception:
-            try:
-                ErrorAuth.executive(None)
-            except IndexError and Exception as error:
-                print('ошибка', error)
-
-        if s_message:
-            Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
-        printer('закончил работу')
-        storage_start = False
-        sleep(60)
-        _thread.exit()
-    except IndexError and Exception:
-        try:
-            ErrorAuth.executive(None)
-        except IndexError and Exception:
-            pass
-
-
-def messages():
+def stats_calculator():
     global const_base
     drive_client = Drive(server['json2'])
     while True:
@@ -403,16 +315,129 @@ def messages():
                 drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
                 printer('конец')
             except IndexError and Exception:
-                try:
-                    ErrorAuth.executive(None)
-                except IndexError and Exception:
-                    pass
+                error_handler()
+
+
+def storage(s_message):
+    global server, storage_lock, storage_start
+    try:
+        old = 0
+        repository = []
+        sql_request = ''
+        params_list = {}
+        printer('начало')
+        db = SQLighter(path['lots'])
+        client = gspread.service_account(server['json2'])
+        start_sql_request = Mash.create_start_sql_request()
+        for s in reversed(client.list_spreadsheet_files()):
+            if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
+                sheet, titles = client.open(s['name']), []
+                print('HELLO', server['json2'], s['name'])
+                for i in range(0, 1 if os.environ.get('server') == 'local' else 45):
+                    checker = sheet.get_worksheet(i)
+                    titles.append(checker.title) if checker else None
+                print(titles)
+                for title in titles:
+                    stamp = datetime.now().timestamp()
+                    worksheet = sheet.worksheet(title)
+                    for lots in sql_divide(worksheet.col_values(1)):
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+                            futures = []
+                            for future in lots:
+                                futures.append(future_executor.submit(Mash.form, future, depth='light'))
+                            for future in concurrent.futures.as_completed(futures):
+                                lot = future.result()
+                                if lot:
+                                    old = lot['au_id'] if lot['au_id'] > old else old
+                                    if lot['base'] != 'None':
+                                        sql_lot = ''
+                                        if lot['params'] != 'None':
+                                            if lot['params'] not in params_list:
+                                                params_list[lot['params']] = [lot['item_name']]
+                                            else:
+                                                if lot['item_name'] not in params_list[lot['params']]:
+                                                    params_list[lot['params']].append(lot['item_name'])
+                                        for key in lot:
+                                            sql_lot += f"'{lot.get(key)}', "
+                                        sql_request += f'{sql_lot[:-2]}), ('
+                                    else:
+                                        repository.append(lot)
+                        if sql_request:
+                            secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                            sql_request = ''
+                    if s_message:
+                        s_message = deepcopy(Auth.edit_dev_message(
+                            s_message, f"\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}"))
+                    print(f'worksheet-{worksheet.title}', datetime.now().timestamp() - stamp)
+        for lots in sql_divide(repository):
+            for lot in lots:
+                params_item_names = params_list.get(lot['params'])
+                if params_item_names:
+                    for item_name in params_item_names:
+                        if item_name in lot['item_name']:
+                            lot = Mash.engrave(item_name, lot)
+                            break
+                if lot['base'] == 'None':
+                    names = []
+                    for item_name in const_base:
+                        if item_name in lot['item_name'] \
+                                and const_base[item_name][0] in allowed_lists['engrave']:
+                            names.append(item_name)
+                    if len(names) >= 1:
+                        item_name = names[0]
+                        for name in names:
+                            if len(name) > len(item_name):
+                                item_name = name
+                        lot = Mash.engrave(item_name, lot)
+                for key in lot:
+                    sql_request += f"'{lot.get(key)}', "
+                sql_request = f'{sql_request[:-2]}), ('
+            if sql_request:
+                secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
+                sql_request = ''
+
+        old += 1
+        if server['lot_barrier'] == 0:
+            server['lot_barrier'] = old
+        if s_message:
+            s_message = deepcopy(Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}"))
+
+        storage_lock = True
+
+        try:
+            print('Ждем завершения lot_telegram_updater')
+            while lot_telegram_updater_closed is False:
+                sleep(1)
+            not_stored = range(old, server['lot_barrier'] + 1)
+            print('DIFF', not_stored)
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            telegram_client = TelegramClient(
+                os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash'])
+            with telegram_client:
+                telegram_client.loop.run_until_complete(update_lots(telegram_client, list(not_stored)))
+        except IndexError and Exception:
+            error_handler()
+
+        storage_lock = False
+        _thread.start_new_thread(lot_telegram_updater, ())
+
+        if s_message:
+            Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
+        printer('закончил работу')
+        storage_start = False
+        _thread.exit()
+    except IndexError and Exception:
+        error_handler()
 
 
 server = {}
 updates = []
 const_base = {}
 storage_start = True
+
+storage_lock = False
+lot_telegram_updater_closed = False
+
 clear_stats = {'costs_list_full': [], 'costs_list_week': [],
                'unsold_count_full': 0, 'unsold_count_week': 0,
                'cancelled_count_full': 0, 'cancelled_count_week': 0}
@@ -427,11 +452,11 @@ Mash = Mash(server, const_base)
 
 def start(stamp):
     if os.environ.get('server') == 'local':
-        threads, start_message = [lot_detector, lot_updater, lot_uploader], None
+        threads, start_message = [lot_uploader, lot_database_updater, lot_telegram_updater], None
         start_message = Auth.start_message(stamp)
     else:
         start_message = Auth.start_message(stamp)
-        threads = [lot_detector, lot_updater, lot_uploader, messages]
+        threads = [lot_detector, lot_uploader, stats_calculator, lot_database_updater, lot_telegram_updater]
     _thread.start_new_thread(storage, (start_message,))
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())

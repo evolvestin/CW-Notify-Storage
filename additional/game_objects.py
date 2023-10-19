@@ -335,7 +335,6 @@ class Mash:
                     lot['base'] = 'ttm'
 
         if lot['params'] != 'None' and lot['base'] == 'None' and depth == 'hard':
-            print('драсте')
             allowed = ['params']
             db = SQLighter(path['lots'])
             params_item_names = secure_sql(db.get_dist_base, [lot, allowed])
