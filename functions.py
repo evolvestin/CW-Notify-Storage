@@ -207,9 +207,7 @@ def log_time(stamp=None, tag=None, gmt=3, form=None):
 
 
 def printer(printer_text):
-    parameter = 'w'
     thread_name = ''
-    directory = os.listdir('.')
     stack = inspect.stack()
     if len(stack) <= 4:
         stack = list(reversed(stack))
@@ -220,14 +218,7 @@ def printer(printer_text):
                 break
     thread_name = re.sub('[<>]', '', thread_name[:-1])
     log_print_text = thread_name + '() [' + str(_thread.get_ident()) + '] ' + str(printer_text)
-    file_print_text = log_time() + log_print_text
-    if log_file_name in directory:
-        file_print_text = '\n' + file_print_text
-        parameter = 'a'
-    file = open(log_file_name, parameter)
-    file.write(file_print_text)
-    print(log_print_text)
-    file.close()
+    print(log_time() + log_print_text)
 
 
 def properties_json(sheet_id, limit, option=None):

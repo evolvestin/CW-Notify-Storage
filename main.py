@@ -73,7 +73,7 @@ def starting_active_db_creation():
             folder = file['id']
             break
     for file in files:
-        if file['name'] == f"{os.environ['session']}.session":
+        if file['name'] in [f"{os.environ['session1']}.session", f"{os.environ['session2']}.session"]:
             client.download_file(file['id'], file['name'])
         if file.get('parents') and folder == file['parents'][0]:
             for key in path:
@@ -119,8 +119,10 @@ def lot_detector():
     global updates
     try:
         asyncio.set_event_loop(asyncio.new_event_loop())
+        telegram_client = TelegramClient(
+            os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash']).start()
         with telegram_client:
-            objects.printer(f"detector() в работе: {server['channel']}")
+            printer(f"detector() в работе: {server['channel']}")
 
             @telegram_client.on(events.NewMessage(chats=server['channel']))
             @telegram_client.on(events.MessageEdited(chats=server['channel']))
@@ -196,7 +198,10 @@ def storage(s_message):
         printer('начало')
         db = SQLighter(path['lots'])
         client = gspread.service_account(server['json2'])
+        asyncio.set_event_loop(asyncio.new_event_loop())
         start_sql_request = Mash.create_start_sql_request()
+        telegram_client = TelegramClient(
+            os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash']).start()
         for s in reversed(client.list_spreadsheet_files()):
             if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
                 sheet, titles = client.open(s['name']), []
@@ -271,14 +276,15 @@ def storage(s_message):
             s_message = deepcopy(Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}"))
 
         try:
-            asyncio.set_event_loop(asyncio.new_event_loop())
+            not_stored = range(old, server['lot_barrier'] + 1)
+            print('DIFF', not_stored)
             with telegram_client:
-                telegram_client.loop.run_until_complete(not_stored_handler(list(range(old, server['lot_barrier']))))
+                telegram_client.loop.run_until_complete(not_stored_handler(list(not_stored)))
         except IndexError and Exception:
             try:
                 ErrorAuth.executive(None)
-            except IndexError and Exception:
-                pass
+            except IndexError and Exception as error:
+                print('ошибка', error)
 
         if s_message:
             Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
@@ -416,7 +422,6 @@ spreadsheet = create_server_json_list()
 objects.concurrent_functions(functions)
 # ========================================================================================================
 Mash = Mash(server, const_base)
-telegram_client = TelegramClient(os.environ['session'], int(os.environ['api_id']), os.environ['api_hash']).start()
 
 
 def start(stamp):
