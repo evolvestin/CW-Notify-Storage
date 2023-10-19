@@ -270,7 +270,7 @@ def storage(s_message):
                 secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                 sql_request = ''
 
-        old += 1 - 300  # временно -300
+        old += 1 - 1000  # временно -1000
         if server['lot_barrier'] == 0:
             server['lot_barrier'] = old
         if s_message:
