@@ -147,7 +147,7 @@ def lot_uploader():
             stamp = datetime.now().timestamp()
             now, db_active, delete_lots_id = time_now(), SQLighter(path['active']), []
             for lot in secure_sql(db_active.get_ended_lots):
-                delete_lots_id.append(lot['au_id']) if lot['stamp'] < now - 3 * 60 * 60 else None
+                delete_lots_id.append(str(lot['au_id'])) if lot['stamp'] < now - 3 * 60 * 60 else None
 
             if delete_lots_id:
                 secure_sql(db_active.custom_sql, f"DELETE FROM lots WHERE au_id IN ({', '.join(delete_lots_id)});")
@@ -187,7 +187,8 @@ def storage(s_message):
         messages_array = await telegram_client.get_messages(server['channel'], ids=ids)
         print('сообщения получены,', len(messages_array))
         for message in messages_array:
-            Mash.update_db_lot(f"{message.id}/{re.sub('/', '&#47;', message.message)}".replace('\n', '/'))
+            if message and message.id and message.message:
+                Mash.update_db_lot(f"{message.id}/{re.sub('/', '&#47;', message.message)}".replace('\n', '/'))
 
     global server, storage_start
     try:
@@ -269,7 +270,7 @@ def storage(s_message):
                 secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
                 sql_request = ''
 
-        old += 1
+        old += 1 - 300  # временно -300
         if server['lot_barrier'] == 0:
             server['lot_barrier'] = old
         if s_message:
