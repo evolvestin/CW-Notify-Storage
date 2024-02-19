@@ -139,7 +139,7 @@ def lot_detector():
                     lot = lot_handler.lot_from_message(response.message)
                     if lot.get('post_id'):
                         db = SQL()
-                        db.update('lots', lot['post_id'], lot, commit=True)
+                        db.insert('lots', lot, primary_key='post_id', commit=True)
                         db.close()
                     Auth.dev.printer(f'Обновление: {lot}')
             Auth.dev.printer(f"detector() в работе: {server['channel']}")
