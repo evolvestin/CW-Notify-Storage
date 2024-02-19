@@ -22,6 +22,7 @@ else:
 
 
 commit_query = True  # Произойдет ли коммит в базу в любой точке (глобально)
+lot_integer_columns = ['post_id', 'lot_id', 'price', 'stamp', 'dispatched']
 lot_columns = ['post_id', 'lot_id',
                'item_id', 'item_name', 'item_emoji', 'enchant', 'left_engrave', 'right_engrave', 'params',
                'quality', 'condition', 'modifiers', 'seller_castle', 'seller_emoji', 'seller_guild', 'seller_name',
@@ -181,10 +182,10 @@ class SQL:
         return self.request(query)
 
     def create_table_lots(self) -> None:
-        columns, integer_columns = [], ['post_id', 'lot_id', 'price', 'stamp', 'dispatched']
+        columns = []
         for column in lot_columns:
             integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
-            column += f' {integer_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
+            column += f' {integer_format} DEFAULT 0 NOT NULL' if column in lot_integer_columns else ' TEXT NULL'
             columns.append(column)
         columns.append('CONSTRAINT lots_pkey PRIMARY KEY (post_id)')
         self.request(f"CREATE TABLE IF NOT EXISTS lots ({', '.join(columns)});")

@@ -184,6 +184,7 @@ def stats_calculator():
             try:
                 Auth.dev.printer('Начало')
                 db = SQL()
+                db.create_table_stats()
                 const, qualities = {}, [None]
                 time_week = time_now() - (7 * 24 * 60 * 60)
                 qualities.extend(db.get_distinct_qualities())

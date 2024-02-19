@@ -1,7 +1,7 @@
 import re
 from timer import timer
 from datetime import datetime
-from functions.SQL import SQL, lot_columns
+from functions.SQL import SQL, lot_columns, lot_integer_columns
 raw_symbols = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#?$%&='*\[\]+.^{}()`⚡|~@:;/\\]"
 
 
@@ -99,7 +99,7 @@ class LotHandler:
         lot = {}
         now = int(datetime.now().timestamp()) - 36 * 60 * 60
         line = re.sub('️', '', raw_lot_text).replace('\'', '&#39;')
-        [lot.update({key: None}) for key in lot_columns]
+        [lot.update({key: 0 if key in lot_integer_columns else None}) for key in lot_columns]
         post_id_search = re.search(r'(\d+?)/', line)
         if post_id_search:
             lot.update({'post_id': int(post_id_search.group(1))})
