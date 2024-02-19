@@ -47,7 +47,7 @@ def starting_items_creation(spreadsheet=None):
     global server
     emojis, item_names = '', {}
     spreadsheet = spreadsheet if spreadsheet is not None else server['spreadsheet']
-    rows = spreadsheet.worksheet('items2').get('A1:Z50000', major_dimension='ROWS')
+    rows = spreadsheet.worksheet('items').get('A1:Z50000', major_dimension='ROWS')
     allowed_to = {header.lower().strip(): [] for header in rows.pop(0)[2:]}
     for row in rows:
         if len(row) >= 2:
