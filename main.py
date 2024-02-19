@@ -1,274 +1,228 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import codecs
 import asyncio
 import gspread
 import _thread
+import requests
 from time import sleep
 import concurrent.futures
-from SQL import SQLighter
+from copy import deepcopy
+from aiogram import types
 from statistics import mean
-import functions as objects
 from ast import literal_eval
+from bs4 import BeautifulSoup
 from datetime import datetime
-from copy import copy, deepcopy
-from additional.GDrive import Drive
+from settings import base_dir
+from aiogram.utils import executor
+from aiogram.dispatcher import Dispatcher
 from statistics import median as median_function
 from telethon.sync import TelegramClient, events
-from additional.game_objects import Mash, path, symbols, allowed_lists
-from functions import code, bold, printer, log_time, time_now, secure_sql, sql_divide, append_values
+
+from functions.SQL import SQL
+from functions.GDrive import Drive
+from functions.lot_handler import LotHandler, raw_symbols
+from functions.objects import code, bold, time_now, AuthCentre, environmental_files
 # =====================================================================================================================
-if __name__ == '__main__':
-    import environ
-    print('Запуск с окружением', environ.environ)
+
+
+def starting_session_creation():
+    client = Drive(server['json2'])
+    for file in client.files():
+        if file['name'] in [f"{os.environ['session1']}.session", f"{os.environ['session2']}.session"]:
+            client.download_file(file['id'], file['name'])
 
 
 def create_server_json_list():
-    global server
-    server['non_emoji_symbols'] = symbols
-    created_files = objects.environmental_files(python=True)
+    _server, created_files = {}, environmental_files(base_dir.joinpath('.'), python=True)
     for file_name in created_files:
         search_json = re.search(r'(\d)\.json', file_name)
-        if search_json:
-            server[f'json{search_json.group(1)}'] = file_name
-    return gspread.service_account(server['json2']).open('Notify')
+        _server.update({f'json{search_json.group(1)}': file_name}) if search_json else None
+    _server.update({'start_message': None, 'storage_reload': False,
+                    'spreadsheet': gspread.service_account(_server['json2']).open('Notify')})
+    return _server
 
 
-def starting_new_lot():
+def starting_items_creation(spreadsheet=None):
     global server
-    while server.get('link: new_lot_id') is None:
-        pass
-    search = objects.query(server['link: new_lot_id'], r'(\d+?)/')
-    if search:
-        server['lot_barrier'] = int(search.group(1)) + 1
-    else:
-        server['lot_barrier'] = 0
-    return f"Переменная server['lot_barrier'] = {server['lot_barrier']} загружена"
-
-
-def starting_const_creation():
-    global const_base
-    const_emoji = ''
-    const_items = spreadsheet.worksheet('items').get('A1:B50000', major_dimension='ROWS')
-    for item in const_items:
-        item_name = re.sub('️', '', item[0])
-        emoji = re.sub(server['non_emoji_symbols'], '', item_name)
-        const_base[item_name] = item[1]
-        if emoji not in const_emoji and len(emoji) > 0:
-            const_emoji += emoji
-    server['non_emoji_symbols'] = server['non_emoji_symbols'].format(const_emoji, '{}')
-    return 'Константы успешно загружены'
-
-
-def starting_active_db_creation():
-    global server
-    client = Drive(server['json2'])
-    files = client.files()
-    folder = 'None'
-    while server.get('storage') is None:
-        pass
-    for file in files:
-        if file['name'] == f"{server['storage']}_folder":
-            folder = file['id']
-            break
-    for file in files:
-        if file['name'] in [f"{os.environ['session1']}.session", f"{os.environ['session2']}.session"]:
-            client.download_file(file['id'], file['name'])
-        if file.get('parents') and folder == file['parents'][0]:
-            for key in path:
-                if key in file['name']:
-                    server[f'{key}_file'] = [file['id'], path[key]]
-                    if key == 'active':
-                        client.download_file(*server[f'{key}_file'])
-    return f"{path['active']} загружен"
+    emojis, item_names = '', {}
+    spreadsheet = spreadsheet if spreadsheet is not None else server['spreadsheet']
+    rows = spreadsheet.worksheet('items2').get('A1:Z50000', major_dimension='ROWS')
+    allowed_to = {header.lower().strip(): [] for header in rows.pop(0)[2:]}
+    for row in rows:
+        if len(row) >= 2:
+            item_name = re.sub('️', '', row[0]).replace('\'', '&#39;')
+            item_names.update({item_name: row[1].strip()})
+            emoji = re.sub(raw_symbols, '', item_name)
+            emojis += emoji if emoji not in emojis and len(emoji) > 0 else ''
+            allowed_to['params'].append(item_name) if len(row) >= 3 and row[2].strip() else None
+            allowed_to['engrave'].append(item_name) if len(row) >= 4 and row[3].strip() else None
+    server.update({'allowed_to': allowed_to, 'item_names': item_names, 'symbols': raw_symbols.format(emojis, '{}')})
 
 
 def starting_server_creation():
-    resources = spreadsheet.worksheet('resources').get('A1:Z50000', major_dimension='COLUMNS')
+    resources = server['spreadsheet'].worksheet('resources').get('A1:Z50000', major_dimension='COLUMNS')
     options = resources.pop(0)
     for option in options:
         for resource in resources:
             if resource[0] == os.environ['server'] and option != 'options':
                 value = resource[options.index(option)]
                 if option in ['castle_list', 'storage', 'channel']:
-                    server[option] = value
-                if option == 'DATA_TOKEN':
-                    server['TOKEN'] = value
+                    server.update({option: value})
+                elif option == 'DATA_TOKEN':
+                    server.update({'TOKEN': value})
                 elif option == 'form':
-                    server[option] = literal_eval(re.sub('️', '', value))
+                    server.update({option: literal_eval(re.sub('️', '', value))})
                 elif option == 'channel':
-                    server[f'link: {option}'] = f'https://t.me/s/{value}/'
+                    server.update({f'link: {option}': f'https://t.me/s/{value}/'})
                 elif option == 'new_lot_id':
-                    server[f'link: {option}'] = f'https://t.me/lot_updater/{value}'
-                    server[option] = int(value)
-    return 'Серверная константа загружена'
+                    server.update({option: int(value), f'link: {option}': f'https://t.me/lot_updater/{value}'})
 # =====================================================================================================================
 
 
-def error_handler():
-    try:
-        ErrorAuth.executive(None)
-    except IndexError and Exception:
-        pass
-
-
-def drive_updater(drive_client, args, json_path):
-    try:
-        drive_client.update_file(*args)
-    except IndexError and Exception:
-        drive_client = Drive(json_path)
-        drive_client.update_file(*args)
-    return drive_client
+server = create_server_json_list()
+starting_functions = [starting_items_creation, starting_server_creation, starting_session_creation]
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
+    starting_functions = [future_executor.submit(future) for future in starting_functions]
+    [future.result() for future in concurrent.futures.as_completed(starting_functions)]
+lot_handler = LotHandler(server)
+Auth = AuthCentre(GMT=3, ID_DEV=int(os.environ['ID_DEV']), TOKEN=server['TOKEN'])
+bot, dispatcher = Auth.async_bot, Dispatcher(Auth.async_bot)
+# =====================================================================================================================
 
 
 async def update_lots(client: TelegramClient, ids: list) -> None:
+    db = SQL()
     messages = await client.get_messages(server['channel'], ids=ids)
     for message in messages:
-        if message and message.id and message.message:
-            Mash.update_db_lot(f"{message.id}/{re.sub('/', '&#47;', message.message)}".replace('\n', '/'))
+        lot = lot_handler.lot_from_message(message)
+        db.update('lots', lot['post_id'], lot, commit=True) if lot.get('post_id') else None
+    db.close()
 
 
-def lot_database_updater():
-    global updates
-    while True:
-        try:
-            Mash.update_db_lot(updates.pop(0)) if updates else None
-            sleep(0.05)
-        except IndexError and Exception:
-            error_handler()
+@dispatcher.message_handler()
+async def message_handler(message: types.Message):
+    try:
+        if message.chat.id > 0:
+            if message.text == '/reload':
+                text = 'Перезагружаем базу данных.'
+                _thread.start_new_thread(storage_reloader, ())
+            else:
+                text = 'Бот статистики функционирует в штатном режиме.'
+            await bot.send_message(message.chat.id, text, parse_mode='HTML')
+    except IndexError and Exception:
+        Auth.dev.async_except(message)
+
+
+def start(stamp):
+    global server
+    if os.environ.get('server') == 'local':
+        threads = [stats_calculator]
+        server.update({'start_message': Auth.dev.start(stamp)})
+    else:
+        server.update({'start_message': Auth.dev.start(stamp)})
+        threads = [lot_detector, stats_calculator, lot_telegram_updater]
+    for thread_element in threads:
+        _thread.start_new_thread(thread_element, ())
+    executor.start_polling(dispatcher)
 
 
 def lot_detector():
-    global updates
     try:
         asyncio.set_event_loop(asyncio.new_event_loop())
-        client = TelegramClient(
-            os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash'])
+        client = TelegramClient(os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash'])
         with client:
             @client.on(events.NewMessage(chats=server['channel']))
             @client.on(events.MessageEdited(chats=server['channel']))
-            async def handler(response):
-                if response.message and response.message.id and response.message.message:
-                    upd = f"{response.message.id}/{re.sub('/', '&#47;', response.message.message)}".replace('\n', '/')
-                    updates.append(upd), printer(f'Обновление: {upd}')
-            printer(f"detector() в работе: {server['channel']}")
+            async def post_handler(response):
+                if response:
+                    lot = lot_handler.lot_from_message(response.message)
+                    if lot.get('post_id'):
+                        db = SQL()
+                        db.update('lots', lot['post_id'], lot, commit=True)
+                        db.close()
+                    Auth.dev.printer(f'Обновление: {lot}')
+            Auth.dev.printer(f"detector() в работе: {server['channel']}")
             client.run_until_disconnected()
     except IndexError and Exception:
-        error_handler()
+        Auth.dev.executive(None)
         _thread.start_new_thread(lot_detector, ())
 
 
 def lot_telegram_updater():
-    global lot_telegram_updater_closed
     try:
         asyncio.set_event_loop(asyncio.new_event_loop())
-        client = TelegramClient(
-            os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash'])
+        client = TelegramClient(os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash'])
     except IndexError and Exception:
-        error_handler()
-        printer('Вылет lot_telegram_updater(), ждем 20 сек и перезапускаем')
-        sleep(20)
+        Auth.dev.executive(None)
         _thread.start_new_thread(lot_telegram_updater, ())
         _thread.exit()
-    printer('Запуск lot_telegram_updater()')
+    Auth.dev.printer('Запуск lot_telegram_updater()')
     while True:
         try:
-            actives = secure_sql(SQLighter(path['active']).get_actives_id)
+            db = SQL()
+            ids = [lot['post_id'] for lot in db.get_active_lots()]
+            db.close()
             with client:
-                client.loop.run_until_complete(update_lots(client, actives))
-            if storage_lock is True:
-                printer('Завершаем lot_telegram_updater() до окончания обновления лотов в storage()')
-                lot_telegram_updater_closed = True
-                _thread.exit()
+                client.loop.run_until_complete(update_lots(client, ids=ids))
             sleep(8)
-        except IndexError and Exception:
-            error_handler()
-
-
-def lot_uploader():
-    counter, drive_lots, drive_active = 0, Drive(server['json4']), Drive(server['json3'])
-    while True:
-        try:
-            counter += 1
-            stamp = datetime.now().timestamp()
-            now, db_active, delete_lots_id = time_now(), SQLighter(path['active']), []
-            for lot in secure_sql(db_active.get_ended_lots):
-                if lot['status'] != '#active' and lot['stamp'] < now - 600:
-                    delete_lots_id.append(str(lot['au_id']))
-
-            if delete_lots_id:
-                secure_sql(db_active.custom_sql, f"DELETE FROM lots WHERE au_id IN ({', '.join(delete_lots_id)});")
-
-            if os.environ.get('server') != 'local':
-                drive_active = drive_updater(drive_active, server['active_file'], server['json3'])
-                if storage_start is False and counter >= 5:
-                    printer(f"{path['active']} синхронизирован, {counter} раз")
-                    counter, drive_lots = 0, drive_updater(drive_lots, server['lots_file'], server['json4'])
-                    printer(f"{path['lots']} синхронизирован")
-
-            delay = 4 - (datetime.now().timestamp() - stamp)
-            sleep(0 if delay < 0 else delay)
-        except IndexError and Exception:
-            error_handler()
+        except IndexError and Exception as error:
+            if re.search('relation "lots" does not exist', str(error)):
+                sleep(15)
+            else:
+                Auth.dev.executive(None)
+                _thread.start_new_thread(lot_telegram_updater, ())
+                _thread.exit()
 
 
 def stats_calculator():
-    global const_base
-    drive_client = Drive(server['json2'])
+    clear_stats = {'costs_list_full': [], 'costs_list_week': [],
+                   'unsold_count_full': 0, 'unsold_count_week': 0,
+                   'cancelled_count_full': 0, 'cancelled_count_week': 0}
     while True:
-        if storage_start is False:
+        if server['storage_reload'] is False:
             try:
-                const = {}
-                printer('начало')
-                qualities = ['None']
-                db = SQLighter(path['lots'])
-                client = gspread.service_account(server['json2'])
-                qualities = append_values(qualities, secure_sql(db.get_dist_quality))
-                const_items = client.open('Notify').worksheet('items').get('A1:B50000', major_dimension='ROWS')
-                temp_base = {re.sub('️', '', item[0]): item[1] for item in const_items}
-                const_reversed_base = {value: key for key, value in temp_base.items()}
+                Auth.dev.printer('Начало')
+                db = SQL()
+                const, qualities = {}, [None]
                 time_week = time_now() - (7 * 24 * 60 * 60)
-                const_base = copy(temp_base)
-                for base in const_reversed_base:
+                qualities.extend(db.get_distinct_qualities())
+                item_ids = {value: key for key, value in server['item_names'].items()}
+                starting_items_creation(gspread.service_account(server['json2']).open('Notify'))
+                for item_id in item_ids:
                     stats = {}
-                    const[base] = {}
-                    lots = secure_sql(db.get_not_actives_by_base, base)
+                    stamp = datetime.now().timestamp()
+                    const.update({item_id: {}})
                     for quality in qualities:
-                        stats[quality] = {'costs_list_full': [], 'costs_list_week': [],
-                                          'unsold_count_full': 0, 'unsold_count_week': 0,
-                                          'cancelled_count_full': 0, 'cancelled_count_week': 0}
-                    for lot in lots:
-                        if lot['base'] == base and lot['quality']:
-                            for quality in qualities:
-                                if lot['quality'] == quality or quality == 'None' or \
-                                        (quality == 'Common' and lot['quality'] == 'None'):
-                                    if lot['status'] != 'Cancelled':
-                                        if lot['b_castle'] != 'None':
-                                            stats[quality]['costs_list_full'].append(lot['cost'])
-                                            if lot['stamp'] >= time_week:
-                                                stats[quality]['costs_list_week'].append(lot['cost'])
-                                        else:
-                                            stats[quality]['unsold_count_full'] += 1
-                                            if lot['stamp'] >= time_week:
-                                                stats[quality]['unsold_count_week'] += 1
-                                    else:
-                                        stats[quality]['cancelled_count_full'] += 1
+                        stats.update({quality: deepcopy(clear_stats)})
+                    for lot in db.get_ended_lots_by_item_id(item_id):
+                        for quality in qualities:
+                            if (lot['quality'] == quality or quality is None
+                                    or (quality == 'Common' and lot['quality'] is None)):
+                                if lot['status'] != 'Cancelled':
+                                    if lot['buyer_castle'] is not None:
+                                        stats[quality]['costs_list_full'].append(lot['price'])
                                         if lot['stamp'] >= time_week:
-                                            stats[quality]['cancelled_count_week'] += 1
+                                            stats[quality]['costs_list_week'].append(lot['price'])
+                                    else:
+                                        stats[quality]['unsold_count_full'] += 1
+                                        if lot['stamp'] >= time_week:
+                                            stats[quality]['unsold_count_week'] += 1
+                                else:
+                                    stats[quality]['cancelled_count_full'] += 1
+                                    if lot['stamp'] >= time_week:
+                                        stats[quality]['cancelled_count_week'] += 1
 
                     for quality in list(stats):
-                        if quality != 'None' and stats[quality] == clear_stats:
+                        if quality is not None and stats[quality] == clear_stats:
                             del stats[quality]
 
-                    if len(stats) == 2:
-                        if stats.get('None') and stats.get('Common'):
-                            if stats['None'] == stats['Common']:
-                                del stats['Common']
+                    if len(stats) == 2 and stats.get(None) and stats.get('Common') and stats[None] == stats['Common']:
+                        del stats['Common']
 
                     for quality in qualities:
                         if stats.get(quality):
-                            const[base][quality] = {'cost': '0/0', 'stats': ''}
+                            const[item_id][quality] = {'cost': '0/0', 'stats': ''}
                             costs_list_full = stats[quality]['costs_list_full']
                             text = bold('{0} ') + str(len(costs_list_full)) + '__'
                             for title in ['{1}', '{2}']:
@@ -290,7 +244,7 @@ def stats_calculator():
                                 if len(costs_list) > 0:
                                     minimum = min(costs_list)
                                     maximum = max(costs_list)
-                                    cost = const[base][quality]['cost']
+                                    cost = const[item_id][quality]['cost']
                                     median = median_function(costs_list)
                                     average = round(mean(costs_list), 2)
                                     median = int(median) if float(median).is_integer() else median
@@ -299,171 +253,92 @@ def stats_calculator():
                                         pattern, median_text = r'/\d+', '/' + str(median)
                                     else:
                                         pattern, median_text = r'\d+/', str(median) + '/'
-                                    const[base][quality]['cost'] = re.sub(pattern, median_text, cost)
+                                    const[item_id][quality]['cost'] = re.sub(pattern, median_text, cost)
                                 text += '{3} ' + str(median) + '_' + \
                                     '{4} ' + str(average) + '_' + \
                                     '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
                                     '{6} ' + str(cancelled_count) + '_' + \
                                     '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
                                     last_sold
-                            const[base][quality]['stats'] = text
+                            const[item_id][quality]['stats'] = text
+                    print(datetime.now().timestamp() - stamp, item_id, item_ids.get(item_id), const[item_id])
 
-                with codecs.open('storage.json', 'w', 'utf-8') as doc:
-                    for base in const_reversed_base:
-                        const[const_reversed_base[base]] = const.pop(base)
-                    doc.write(str(const))
-                    doc.close()
-                drive_client = drive_updater(drive_client, server['storage_file'], server['json2'])
-                printer('конец')
+                new_stats = []
+                for item_id, stat in const.items():
+                    for quality, values in stat.items():
+                        count = db.update_stat(item_id, quality, values)
+                        if count <= 0:
+                            values.update({
+                                'item_id': item_id, 'item_name': item_ids.get(item_id), 'quality': quality})
+                            new_stats.append(values)
+                db.insert_many('stats', new_stats, primary_key='id', commit=True)
+                Auth.dev.printer('конец')
             except IndexError and Exception:
-                error_handler()
+                Auth.dev.thread_except()
 
 
-def storage(s_message):
-    global server, storage_lock, storage_start
+def storage_reloader():
+    global server
     try:
-        old = 0
-        repository = []
-        sql_request = ''
+        Auth.dev.printer('Перезагрузка всей базы лотов')
+        db = SQL()
         params_list = {}
-        printer('начало')
-        db = SQLighter(path['lots'])
+        need_hard_handle = []
+        db.create_table_lots()
+        server.update({'storage_reload': True})
+        lot_barrier, calculated_lot_barrier = 1, 1
         client = gspread.service_account(server['json2'])
-        start_sql_request = Mash.create_start_sql_request()
-        for s in reversed(client.list_spreadsheet_files()):
-            if s['name'] in [pre + server['storage'] for pre in ['', 'temp-']]:
-                sheet, titles = client.open(s['name']), []
-                print('HELLO', server['json2'], s['name'])
-                for i in range(0, 1 if os.environ.get('server') == 'local' else 45):
-                    checker = sheet.get_worksheet(i)
-                    titles.append(checker.title) if checker else None
-                print(titles)
-                for title in titles:
-                    stamp = datetime.now().timestamp()
-                    worksheet = sheet.worksheet(title)
-                    for lots in sql_divide(worksheet.col_values(1)):
-                        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
-                            futures = []
-                            for future in lots:
-                                futures.append(future_executor.submit(Mash.form, future, depth='light'))
-                            for future in concurrent.futures.as_completed(futures):
-                                lot = future.result()
-                                if lot:
-                                    old = lot['au_id'] if lot['au_id'] > old else old
-                                    if lot['base'] != 'None':
-                                        sql_lot = ''
-                                        if lot['params'] != 'None':
-                                            if lot['params'] not in params_list:
-                                                params_list[lot['params']] = [lot['item_name']]
-                                            else:
-                                                if lot['item_name'] not in params_list[lot['params']]:
-                                                    params_list[lot['params']].append(lot['item_name'])
-                                        for key in lot:
-                                            sql_lot += f"'{lot.get(key)}', "
-                                        sql_request += f'{sql_lot[:-2]}), ('
-                                    else:
-                                        repository.append(lot)
-                        if sql_request:
-                            secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
-                            sql_request = ''
-                    if s_message:
-                        s_message = deepcopy(Auth.edit_dev_message(
-                            s_message, f"\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}"))
-                    print(f'worksheet-{worksheet.title}', datetime.now().timestamp() - stamp)
-        for lots in sql_divide(repository):
-            for lot in lots:
-                params_item_names = params_list.get(lot['params'])
-                if params_item_names:
-                    for item_name in params_item_names:
-                        if item_name in lot['item_name']:
-                            lot = Mash.engrave(item_name, lot)
-                            break
-                if lot['base'] == 'None':
-                    names = []
-                    for item_name in const_base:
-                        if item_name in lot['item_name'] \
-                                and const_base[item_name][0] in allowed_lists['engrave']:
-                            names.append(item_name)
-                    if len(names) >= 1:
-                        item_name = names[0]
-                        for name in names:
-                            if len(name) > len(item_name):
-                                item_name = name
-                        lot = Mash.engrave(item_name, lot)
-                for key in lot:
-                    sql_request += f"'{lot.get(key)}', "
-                sql_request = f'{sql_request[:-2]}), ('
-            if sql_request:
-                secure_sql(db.custom_sql, f'{start_sql_request}{sql_request[:-3]};')
-                sql_request = ''
+        spreadsheet_names = [pre + server['storage'] for pre in ['', 'temp-']]
+        soup = BeautifulSoup(requests.get(f"{server['link: new_lot_id']}?embed=1").text, 'html.parser')
 
-        old += 1
-        if server['lot_barrier'] == 0:
-            server['lot_barrier'] = old
-        if s_message:
-            s_message = deepcopy(Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}"))
+        if soup.find('div', class_='tgme_widget_message_error') is None:
+            raw = str(soup.find('div', class_='tgme_widget_message_text js-message_text')).replace('<br/>', '\n')
+            search = re.search(r'(\d+?)/', BeautifulSoup(raw, 'html.parser').get_text(), flags=re.DOTALL)
+            lot_barrier = (int(search.group(1)) + 1) if search else lot_barrier
 
-        storage_lock = True
+        for storage_spreadsheet in reversed(client.list_spreadsheet_files()):
+            if storage_spreadsheet['name'] in spreadsheet_names:
+                for worksheet in client.open(storage_spreadsheet['name']).worksheets():
+                    lots, stamp = [], datetime.now().timestamp()
+                    for raw_lot_text in worksheet.col_values(1):
+                        lot = lot_handler.lot_from_raw(raw_lot_text, depth='light')
+                        if lot['post_id'] is not None and lot['post_id'] > calculated_lot_barrier:
+                            calculated_lot_barrier = lot['post_id']
+                        if lot['item_id'] is not None:
+                            lots.append(lot)
+                            if lot['params'] is not None:
+                                if lot['params'] not in params_list:
+                                    params_list.update({lot['params']: [lot['item_name']]})
+                                else:
+                                    if lot['item_name'] not in params_list[lot['params']]:
+                                        params_list[lot['params']].append(lot['item_name'])
+                        elif lot['post_id'] is not None:
+                            need_hard_handle.append(lot)
+                    db.insert_many('lots', lots, primary_key='post_id', commit=True)
+                    if server['start_message']:
+                        start_message = deepcopy(Auth.message(
+                            tag=code, old_message=server['start_message'],
+                            text=f'\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}'))
+                        server.update({'start_message': start_message})
+                    Auth.dev.printer(f'worksheet-{worksheet.title} {datetime.now().timestamp() - stamp}')
+        hard_handled = [lot_handler.hard_item_id_search(lot, params_list) for lot in need_hard_handle]
+        db.insert_many('lots', hard_handled, primary_key='post_id', commit=True)
 
-        try:
-            print('Ждем завершения lot_telegram_updater')
-            while lot_telegram_updater_closed is False:
-                sleep(1)
-            not_stored = range(old, server['lot_barrier'] + 1)
-            print('DIFF', not_stored)
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            telegram_client = TelegramClient(
-                os.environ['session2'], int(os.environ['api_id']), os.environ['api_hash'])
-            with telegram_client:
-                telegram_client.loop.run_until_complete(update_lots(telegram_client, list(not_stored)))
-        except IndexError and Exception:
-            error_handler()
-
-        storage_lock = False
-        _thread.start_new_thread(lot_telegram_updater, ())
-
-        if s_message:
-            Auth.edit_dev_message(s_message, f"\n{log_time(tag=code)}")
-        printer('закончил работу')
-        storage_start = False
-        _thread.exit()
+        calculated_lot_barrier += 1
+        lot_barrier = (calculated_lot_barrier + 10000) if lot_barrier == 1 else (lot_barrier + 1)
+        not_stored_range = range(calculated_lot_barrier, lot_barrier)
+        print('DIFF', not_stored_range)
+        not_stored = [{'post_id': post_id, 'status': '#active'} for post_id in not_stored_range]
+        db.insert_many('lots', not_stored, primary_key='post_id', commit=True)
+        server.update({'storage_reload': False})
+        db.close()
+        if server['start_message']:
+            Auth.message(old_message=server['start_message'], text=f'\n{Auth.time()} Reload ended.', tag=code)
     except IndexError and Exception:
-        error_handler()
+        Auth.dev.thread_except()
 
 
-server = {}
-updates = []
-const_base = {}
-storage_start = True
-
-storage_lock = False
-lot_telegram_updater_closed = False
-
-clear_stats = {'costs_list_full': [], 'costs_list_week': [],
-               'unsold_count_full': 0, 'unsold_count_week': 0,
-               'cancelled_count_full': 0, 'cancelled_count_week': 0}
-functions = [starting_const_creation, starting_server_creation, starting_active_db_creation, starting_new_lot]
-ErrorAuth = objects.AuthCentre(os.environ['ERROR-TOKEN'])
-Auth = objects.AuthCentre(os.environ['DEV-TOKEN'])
-spreadsheet = create_server_json_list()
-objects.concurrent_functions(functions)
-# ========================================================================================================
-Mash = Mash(server, const_base)
-
-
-def start(stamp):
-    if os.environ.get('server') == 'local':
-        threads, start_message = [lot_uploader, lot_database_updater, lot_telegram_updater], None
-        start_message = Auth.start_message(stamp)
-    else:
-        start_message = Auth.start_message(stamp)
-        threads = [lot_detector, lot_uploader, stats_calculator, lot_database_updater, lot_telegram_updater]
-    _thread.start_new_thread(storage, (start_message,))
-    for thread_element in threads:
-        _thread.start_new_thread(thread_element, ())
-    while True:
-        sleep(5000)
-
-
-if os.environ.get('server') == 'local':
+if __name__ == '__main__' and os.environ.get('server') == 'local':
+    import environ
     start(time_now())
+    print('Запуск с окружением', environ.environ)

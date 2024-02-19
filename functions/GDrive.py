@@ -1,6 +1,6 @@
 import io
 import re
-import functions as objects
+from functions.objects import stamper
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
@@ -18,7 +18,7 @@ class Drive:
         for key in ['modifiedTime', 'createdTime']:
             if file.get(key):
                 stamp = re.sub(r'\..*?Z', '', file[key])
-                file[key] = objects.stamper(stamp, '%Y-%m-%dT%H:%M:%S')
+                file[key] = stamper(stamp, pattern='%Y-%m-%dT%H:%M:%S')
         return file
 
     def delete_file(self, file_id):
@@ -27,10 +27,9 @@ class Drive:
     def add_file_to_folder(self, file_id, folder_id):
         self.client.files().update(fileId=file_id, addParents=folder_id).execute()
 
-    def update_file(self, file_id, file_path, description=''):
-        file_metadata = {'description': description}
+    def update_file(self, file_id, file_path):
         media_body = MediaFileUpload(file_path, resumable=True)
-        return self.client.files().update(fileId=file_id, media_body=media_body, body=file_metadata).execute()
+        return self.client.files().update(fileId=file_id, media_body=media_body).execute()
 
     def get_permissions(self, file_id):
         fields = 'permissions(id, emailAddress, role)'
@@ -80,7 +79,7 @@ class Drive:
             except IndexError and Exception:
                 done = False
 
-    def files(self, fields=standard_file_fields, only_folders=None, name_startswith=None, parents=None):
+    def files(self, fields=standard_file_fields, only_folders=False, name_startswith=False, parents=False):
         query = ''
         response = []
         if only_folders:
