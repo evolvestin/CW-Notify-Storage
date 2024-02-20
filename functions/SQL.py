@@ -22,12 +22,11 @@ else:
 
 
 commit_query = True  # Произойдет ли коммит в базу в любой точке (глобально)
-lot_integer_columns = ['post_id', 'lot_id', 'price', 'stamp', 'dispatched_eu', 'dispatched_ru', 'dispatched_test']
-lot_columns = ['post_id', 'lot_id',
-               'item_id', 'item_name', 'item_emoji', 'enchant', 'left_engrave', 'right_engrave', 'params',
-               'quality', 'condition', 'modifiers', 'seller_castle', 'seller_emoji', 'seller_guild', 'seller_name',
-               'price', 'buyer_castle', 'buyer_emoji', 'buyer_guild', 'buyer_name', 'stamp',
-               'dispatched_eu', 'dispatched_ru', 'dispatched_test', 'status']
+lot_integer_columns = ['post_id', 'lot_id', 'price', 'stamp']
+lot_columns = ['post_id',
+               'lot_id', 'item_id', 'item_name', 'item_emoji', 'enchant', 'left_engrave', 'right_engrave',
+               'params', 'quality', 'condition', 'modifiers', 'seller_castle', 'seller_emoji', 'seller_guild',
+               'seller_name', 'price', 'buyer_castle', 'buyer_emoji', 'buyer_guild', 'buyer_name', 'stamp', 'status']
 
 
 def perform_connection():
