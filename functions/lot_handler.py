@@ -108,12 +108,14 @@ class LotHandler:
                 if search:
                     if key == 'stamp':
                         lot.update({key: timer(search)})
+                    elif key == 'price':
+                        lot.update({key: int(search.group(1))})
                     elif key == 'modifiers':
                         lot.update({key: re.sub('/', '\n', search.group(1))})
                     elif key == 'condition':
                         lot.update({key: re.sub(' ⏰.*', '', search.group(1))})
                     elif key == 'title':
-                        lot.update({'lot_id': search.group(1)})
+                        lot.update({'lot_id': int(search.group(1))})
                         lot = self.search_lot_title(lot, search.group(2))
                     elif key == 'status':
                         status = 'Cancelled' if search.group(1) == 'Failed' else search.group(1)
