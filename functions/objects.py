@@ -296,7 +296,7 @@ class AuthCentre:
             'token': const_args.get('TOKEN') or const_args.get('DEV_TOKEN')})
 
         for key in ['dev', 'log']:
-            const_args[key] = const_args.get(f'{key.upper()}_TOKEN')
+            const_args[f'{key}_token'] = const_args.get(f'{key.upper()}_TOKEN')
 
         if type(const_args.get('GMT')) == int:
             const_args['delta'] = const_args['GMT']
@@ -397,7 +397,7 @@ class AuthCentre:
             try:
                 message = bot.send_message(chat_id, kwargs['text'],
                                            reply_markup=kwargs.get('keyboard'),
-                                           disable_web_page_preview=kwargs.get('preview'),
+                                           disable_web_page_preview=False if kwargs.get('preview') else True,
                                            reply_to_message_id=kwargs.get('reply_id'),
                                            protect_content=kwargs.get('protect'), parse_mode='HTML')
             except IndexError and Exception as error:
@@ -741,9 +741,9 @@ class AuthCentre:
                         description = f" {bold('Большое сообщение')}: #split"
                         modified_text = re.sub(r'\n\s+', '\n', split.pop(-1))
                         for s_text in [''.join(split) + description, modified_text]:
-                            log_message = self.message(id=self.target_chat['id'], text=s_text)
+                            log_message = self.message(id=self.target_chat['id'], text=str(s_text))
                     elif text:
-                        log_message = self.message(id=self.target_chat['id'], text=text)
+                        log_message = self.message(id=self.target_chat['id'], text=str(text))
                     time.sleep(self.delay)
 
                     if log_message:
