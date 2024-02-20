@@ -53,10 +53,10 @@ class LotHandler:
                 if len(names) >= 1:
                     lot = self.engrave(lot, str(sorted(names, key=len, reverse=True)[0]))
 
-        if lot['item_id'] is None:
+        if lot['item_id'] is None and lot['item_name'] is not None:
             names = []
             for item_name in self.item_names:
-                if item_name in lot['item_name'] and item_name in self.allowed_to['engrave']:
+                if item_name in lot['item_name'] and item_name in self.allowed_to.get('engrave', []):
                     names.append(item_name)
             if len(names) >= 1:
                 lot = self.engrave(lot, str(sorted(names, key=len, reverse=True)[0]))
@@ -83,7 +83,7 @@ class LotHandler:
         lot.update({'item_name': item_name.strip()})
         if lot['item_name'] in self.item_names:
             lot.update({'item_id': self.item_names[lot['item_name']]})
-            if lot.get('params') is not None and lot['item_name'] not in self.allowed_to['params']:
+            if lot.get('params') is not None and lot['item_name'] not in self.allowed_to.get('params', []):
                 lot.update({'item_id': None})
         else:
             if re.search(r'lvl\.\d+', lot['item_name']):  # Search mystery items
