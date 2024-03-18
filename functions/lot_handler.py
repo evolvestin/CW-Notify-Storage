@@ -71,7 +71,7 @@ class LotHandler:
                 lot.update({'params': ''})
             lot['params'] += parameter
         if enchant_search:
-            lot.update({'enchant': enchant_search.group(1)})
+            lot.update({'enchant': int(enchant_search.group(1))})
             item_name = re.sub(r'(\+\d+ )|(⚡)', '', item_name)
         else:
             item_name = re.sub(r'⚡', '', item_name)

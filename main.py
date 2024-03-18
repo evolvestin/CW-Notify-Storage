@@ -273,8 +273,10 @@ def stats_calculator():
                                 'item_id': item_id, 'item_name': item_ids.get(item_id), 'quality': quality})
                             new_stats.append(values)
                 db.insert_many('stats', new_stats, primary_key='id', commit=True)
+                db.close()
                 Auth.dev.printer('конец')
             except IndexError and Exception:
+                sleep(500)
                 Auth.dev.thread_except()
 
 
