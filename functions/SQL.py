@@ -185,7 +185,7 @@ class SQL:
         columns = []
         for column in lot_columns:
             integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
-            integer_default = 'NULL' if column in ['enchant'] else 'DEFAULT 0 NOT NULL'
+            integer_default = 'DEFAULT NULL' if column in ['enchant'] else 'DEFAULT 0 NOT NULL'
             column += f' {integer_format} {integer_default}' if column in lot_integer_columns else ' TEXT NULL'
             columns.append(column)
         columns.append('CONSTRAINT lots_pkey PRIMARY KEY (post_id)')
