@@ -70,10 +70,12 @@ class LotHandler:
             if lot.get('params') is None:
                 lot.update({'params': ''})
             lot['params'] += parameter
+
         if enchant_search:
             lot.update({'enchant': int(enchant_search.group(1))})
             item_name = re.sub(r'(\+\d+ )|(⚡)', '', item_name)
         else:
+            lot.update({'enchant': None})
             item_name = re.sub(r'⚡', '', item_name)
 
         item_emoji = re.sub(self.symbols, '', item_name)
