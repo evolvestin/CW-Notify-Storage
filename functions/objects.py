@@ -43,7 +43,8 @@ patterns = {
     'retry': r'(Too Many Requests: retry after|Retry in|Please try again in) (\d+)(\n| seconds)*',
     'block': '|'.join(['The group has been migrated', 'bot was kicked from the supergroup chat',
                        'initiate conversation with a user', 'user is deactivated', 'Have no rights',
-                       'bot was blocked by the user', 'Chat not found', 'bot was kicked from the group chat']),
+                       'bot was blocked by the user', '[Cc]hat not found', 'bot was kicked from the group chat',
+                       'Not enough rights to send text messages to the chat']),
     'minor': '|'.join(['Read timed out.', 'ServerDisconnectedError', 'EOF occurred in violation of protocol',
                        'Message to forward not found', 'Message can&#39;t be forwarded', 'Message_id_invalid',
                        'Connection aborted', 'Connection reset by peer', 'Failed to establish a new connection'])}
@@ -67,6 +68,14 @@ def code(text):
 
 def html_link(link, text):
     return f'<a href="{link}">{text}</a>'
+
+
+def sub_tag(text: str) -> str:  # Substitute tags
+    return re.sub('<.*?>', '', str(text))
+
+
+def sub_blank(text: str) -> str:  # Substitute blank space
+    return re.sub(r'️', '', str(text))  # In sideways added broken space symbol (️)
 
 
 def spoiler(text):
@@ -118,6 +127,14 @@ def patch_win_date(date: int = None) -> datetime or None:
     if date is not None and sys.platform == 'win32':
         date -= int((datetime.now() - datetime.now(tz).replace(tzinfo=None)).total_seconds())
     return date
+
+
+def d_range(start: Decimal, stop: Decimal, step: Decimal = Decimal('1')) -> list:
+    def decimal_range(_start: Decimal):
+        while _start < stop:
+            yield _start
+            _start += step
+    return list(decimal_range(start))
 
 
 def iso_timestamp(date):
@@ -444,11 +461,11 @@ class AuthCentre:
                                           reply_markup=kwargs.get('keyboard'), parse_mode='HTML',
                                           reply_to_message_id=kwargs.get('reply'), disable_web_page_preview=True)
 
-            elif task_name == 'edit_message_text':
+            elif task_name in ['edit_message_text', 'edit_message_caption', 'edit_message_media']:
                 if kwargs.get('call'):
-                    modified, hard = None, None
                     message = kwargs['call']['message']
                     message['from'] = kwargs['call']['from']
+                    hard, modified, input_media = None, None, None
                     message['date'] = time_now(self.const_args['delta'])
                     log_text = 'Нажал' if log_text is None else log_text
                     try:
@@ -457,17 +474,50 @@ class AuthCentre:
                         pass
 
                     if kwargs.get('text'):
-                        modified = html_secure(re.sub('<.*?>', '', kwargs['text']), reverse=True).strip()
+                        modified = html_secure(sub_tag(kwargs['text']), reverse=True).strip()
+                    if kwargs.get('photo_id'):
+                        input_media = types.InputMediaPhoto(kwargs.get('photo_id'))
+                    elif kwargs.get('video_id'):
+                        input_media = types.InputMediaVideo(kwargs.get('video_id'))
+                    elif kwargs.get('audio_id'):
+                        input_media = types.InputMediaAudio(kwargs.get('audio_id'))
+                    elif kwargs.get('document_id'):
+                        input_media = types.InputMediaDocument(kwargs.get('document_id'))
+                    elif kwargs.get('file_id') or kwargs.get('media'):
+                        media = kwargs.get('file_id') or kwargs.get('media')
+                        if type(media) is types.InputMediaPhoto:
+                            input_media = media
+                        elif type(media) is str:
+                            if media.lower().endswith(('.jpg', '.png')):
+                                input_media = types.InputMediaPhoto(types.InputFile(media))
+                            elif media.lower().startswith('a'):
+                                input_media = types.InputMediaPhoto(media)
+                            elif media.lower().startswith('b'):
+                                input_media = types.InputMediaVideo(media)
                     try:
-                        if message['text'] == modified or kwargs.get('text') is None:
+                        if task_name == 'edit_message_media' and input_media is not None:
+                            input_media.parse_mode = 'HTML'
+                            input_media.caption = kwargs.get('text')
+                            input_media.has_spoiler = kwargs.get('spoiler')
+                            await task(media=input_media, chat_id=message['chat']['id'],
+                                       message_id=message['message_id'], reply_markup=kwargs.get('keyboard'))
+                        elif message['text'] == modified or kwargs.get('text') is None:
                             if kwargs.get('keyboard') != message['reply_markup']:
                                 task = self.async_bot.edit_message_reply_markup
                                 await task(message['chat']['id'], message['message_id'],
                                            reply_markup=kwargs.get('keyboard'))
                         else:
-                            await task(kwargs['text'], message['chat']['id'],
-                                       message['message_id'], parse_mode='HTML',
-                                       reply_markup=kwargs.get('keyboard'), disable_web_page_preview=True)
+                            if message['caption'] is not None:
+                                task = self.async_bot.edit_message_caption
+                                await task(
+                                    caption=kwargs['text'],
+                                    chat_id=message['chat']['id'],
+                                    message_id=message['message_id'],
+                                    reply_markup=kwargs.get('keyboard'), parse_mode='HTML')
+                            else:
+                                await task(text=kwargs['text'], chat_id=message['chat']['id'],
+                                           message_id=message['message_id'], parse_mode='HTML',
+                                           reply_markup=kwargs.get('keyboard'), disable_web_page_preview=True)
                     except IndexError and Exception as error:
                         error_text = ''
                         log_text = f'{log_text}, но получил #timeout' if log_text is not False else False
@@ -499,8 +549,7 @@ class AuthCentre:
                         kwargs[key] = value if type(value) is dict else value.to_python()
 
                 if kwargs.get('text'):
-                    error_text = f"\nlen(re.sub(<.*?>, text)) = " \
-                                 f"{len(re.sub('<.*?>', '', str(kwargs['text'])))}" \
+                    error_text = f"\nlen(re.sub(<.*?>, text)) = {len(sub_tag(kwargs['text']))}" \
                                  f"\nlen(text) = {len(str(kwargs['text']))}\ntext = {kwargs['text']}"
                 self.dev.executive(f'Not delivered {task_name.upper()} to: {target_id}\n'
                                    f'Short error: {error}{error_text}\nKeys: {kwargs}')
@@ -736,7 +785,7 @@ class AuthCentre:
                     send.append(log_text)
                 for text in send:
                     log_message = None
-                    if text and len(text) > 4096 and len(re.sub('<.*?>', '', text)) > 4096:
+                    if text and len(text) > 4096 and len(sub_tag(text)) > 4096:
                         split = re.split(f'({self.arrows})', text)
                         description = f" {bold('Большое сообщение')}: #split"
                         modified_text = re.sub(r'\n\s+', '\n', split.pop(-1))
@@ -1108,7 +1157,7 @@ class AuthCentre:
 
         # -------------------------------------------------------------------------------- DEV EXECUTIVE
         def send_except(self, title='', error=None, message=None):
-            len_title = len(re.sub('<.*?>', '', title))
+            len_title = len(sub_tag(title))
             error = str(error) if error else ''
             len_text = len_title + len(error)
             caption, message_text = None, ''

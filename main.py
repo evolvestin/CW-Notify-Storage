@@ -22,7 +22,7 @@ from telethon.sync import TelegramClient, events
 from functions.SQL import SQL
 from functions.GDrive import Drive
 from functions.lot_handler import LotHandler, raw_symbols
-from functions.objects import code, bold, time_now, AuthCentre, environmental_files
+from functions.objects import code, bold, time_now, sub_blank, AuthCentre, environmental_files
 # =====================================================================================================================
 
 
@@ -51,7 +51,7 @@ def starting_items_creation(spreadsheet=None):
     allowed_to = {header.lower().strip(): [] for header in rows.pop(0)[2:]}
     for row in rows:
         if len(row) >= 2:
-            item_name = re.sub('️', '', row[0]).replace('\'', '&#39;')
+            item_name = sub_blank(row[0]).replace('\'', '&#39;')
             item_names.update({item_name: row[1].strip()})
             emoji = re.sub(raw_symbols, '', item_name)
             emojis += emoji if emoji not in emojis and len(emoji) > 0 else ''
@@ -72,7 +72,7 @@ def starting_server_creation():
                 elif option == 'DATA_TOKEN':
                     server.update({'TOKEN': value})
                 elif option == 'form':
-                    server.update({option: literal_eval(re.sub('️', '', value))})
+                    server.update({option: literal_eval(sub_blank(value))})
                 elif option == 'channel':
                     server.update({f'link: {option}': f'https://t.me/s/{value}/'})
                 elif option == 'new_lot_id':

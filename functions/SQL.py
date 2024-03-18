@@ -22,7 +22,7 @@ else:
 
 
 commit_query = True  # Произойдет ли коммит в базу в любой точке (глобально)
-lot_integer_columns = ['post_id', 'lot_id', 'price', 'stamp']
+lot_integer_columns = ['post_id', 'lot_id', 'enchant', 'price', 'stamp']
 lot_columns = ['post_id',
                'lot_id', 'item_id', 'item_name', 'item_emoji', 'enchant', 'left_engrave', 'right_engrave',
                'params', 'quality', 'condition', 'modifiers', 'seller_castle', 'seller_emoji', 'seller_guild',
@@ -189,6 +189,8 @@ class SQL:
             columns.append(column)
         columns.append('CONSTRAINT lots_pkey PRIMARY KEY (post_id)')
         self.request(f"CREATE TABLE IF NOT EXISTS lots ({', '.join(columns)});")
+        self.request(f"CREATE INDEX IF NOT EXISTS index_lot_id ON lots (lot_id);")
+        self.request(f"CREATE INDEX IF NOT EXISTS index_item_id ON lots (item_id);")
         self.commit()
     # ------------------------------------------------------------------------------------------ LOTS END
 
