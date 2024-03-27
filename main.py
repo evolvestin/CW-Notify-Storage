@@ -6,87 +6,25 @@ import gspread
 import _thread
 import requests
 from time import sleep
-import concurrent.futures
 from copy import deepcopy
 from aiogram import types
 from statistics import mean
-from ast import literal_eval
 from bs4 import BeautifulSoup
 from datetime import datetime
-from settings import base_dir
 from aiogram.utils import executor
 from aiogram.dispatcher import Dispatcher
 from statistics import median as median_function
 from telethon.sync import TelegramClient, events
 
-from functions.SQL import SQL
-from functions.GDrive import Drive
-from functions.lot_handler import LotHandler, raw_symbols
-from functions.objects import code, bold, time_now, sub_blank, AuthCentre, environmental_files
+from functions.SQL import SQL, commit_query
+from functions.lot_handler import LotHandler
+from functions.objects import code, bold, time_now, AuthCentre
+from functions.initial import const_creation, update_const_items
 # =====================================================================================================================
 
-
-def starting_session_creation():
-    client = Drive(server['json2'])
-    for file in client.files():
-        if file['name'] in [f"{os.environ['session1']}.session", f"{os.environ['session2']}.session"]:
-            client.download_file(file['id'], file['name'])
-
-
-def create_server_json_list():
-    _server, created_files = {}, environmental_files(base_dir.joinpath('.'), python=True)
-    for file_name in created_files:
-        search_json = re.search(r'(\d)\.json', file_name)
-        _server.update({f'json{search_json.group(1)}': file_name}) if search_json else None
-    _server.update({'start_message': None, 'storage_reload': False,
-                    'spreadsheet': gspread.service_account(_server['json2']).open('Notify')})
-    return _server
-
-
-def starting_items_creation(spreadsheet=None):
-    global server
-    emojis, item_names = '', {}
-    spreadsheet = spreadsheet if spreadsheet is not None else server['spreadsheet']
-    rows = spreadsheet.worksheet('items').get('A1:Z50000', major_dimension='ROWS')
-    allowed_to = {header.lower().strip(): [] for header in rows.pop(0)[2:]}
-    for row in rows:
-        if len(row) >= 2:
-            item_name = sub_blank(row[0]).replace('\'', '&#39;')
-            item_names.update({item_name: row[1].strip()})
-            emoji = re.sub(raw_symbols, '', item_name)
-            emojis += emoji if emoji not in emojis and len(emoji) > 0 else ''
-            allowed_to['params'].append(item_name) if len(row) >= 3 and row[2].strip() else None
-            allowed_to['engrave'].append(item_name) if len(row) >= 4 and row[3].strip() else None
-    server.update({'allowed_to': allowed_to, 'item_names': item_names, 'symbols': raw_symbols.format(emojis, '{}')})
-
-
-def starting_server_creation():
-    resources = server['spreadsheet'].worksheet('resources').get('A1:Z50000', major_dimension='COLUMNS')
-    options = resources.pop(0)
-    for option in options:
-        for resource in resources:
-            if resource[0] == os.environ['server'] and option != 'options':
-                value = resource[options.index(option)]
-                if option in ['castle_list', 'storage', 'channel']:
-                    server.update({option: value})
-                elif option == 'DATA_TOKEN':
-                    server.update({'TOKEN': value})
-                elif option == 'form':
-                    server.update({option: literal_eval(sub_blank(value))})
-                elif option == 'channel':
-                    server.update({f'link: {option}': f'https://t.me/s/{value}/'})
-                elif option == 'new_lot_id':
-                    server.update({option: int(value), f'link: {option}': f'https://t.me/lot_updater/{value}'})
-# =====================================================================================================================
-
-
-server = create_server_json_list()
-starting_functions = [starting_items_creation, starting_server_creation, starting_session_creation]
-with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
-    starting_functions = [future_executor.submit(future) for future in starting_functions]
-    [future.result() for future in concurrent.futures.as_completed(starting_functions)]
+server = const_creation()
 lot_handler = LotHandler(server)
-Auth = AuthCentre(GMT=3, ID_DEV=int(os.environ['ID_DEV']), TOKEN=server['TOKEN'])
+Auth = AuthCentre(GMT=3, ID_DEV=int(os.environ['ID_DEV']), TOKEN=server['DATA_TOKEN'])
 bot, dispatcher = Auth.async_bot, Dispatcher(Auth.async_bot)
 # =====================================================================================================================
 
@@ -175,106 +113,102 @@ def lot_telegram_updater():
                 _thread.exit()
 
 
+def create_stats(db: SQL, item: dict):
+    time_week = time_now() - (7 * 24 * 60 * 60)
+    lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
+    stats = {'costs_list_full': [], 'costs_list_week': [],
+             'unsold_count_full': 0, 'unsold_count_week': 0,
+             'cancelled_count_full': 0, 'cancelled_count_week': 0}
+    for lot in lots:
+        if lot['status'] != 'Cancelled':
+            if lot['buyer_castle'] is not None:
+                stats['costs_list_full'].append(lot['price'])
+                if lot['stamp'] >= time_week:
+                    stats['costs_list_week'].append(lot['price'])
+            else:
+                stats['unsold_count_full'] += 1
+                if lot['stamp'] >= time_week:
+                    stats['unsold_count_week'] += 1
+        else:
+            stats['cancelled_count_full'] += 1
+            if lot['stamp'] >= time_week:
+                stats['cancelled_count_week'] += 1
+
+    value = {'cost': '0/0', 'stats': ''}
+    costs_list_full = stats['costs_list_full']
+    text = bold('{0} ') + str(len(costs_list_full)) + '__'
+    for title in ['{1}', '{2}']:
+        median = 0
+        minimum = 0
+        maximum = 0
+        average = 0
+        last_sold = ''
+        text += bold(title) + '_'
+        if title == '{1}':
+            last_sold = '__'
+            costs_list = costs_list_full
+            unsold_count = stats['unsold_count_full']
+            cancelled_count = stats['cancelled_count_full']
+        else:
+            costs_list = stats['costs_list_week']
+            unsold_count = stats['unsold_count_week']
+            cancelled_count = stats['cancelled_count_week']
+        if len(costs_list) > 0:
+            minimum = min(costs_list)
+            maximum = max(costs_list)
+            cost = value['cost']
+            median = median_function(costs_list)
+            average = round(mean(costs_list), 2)
+            median = int(median) if float(median).is_integer() else median
+            if title == '{2}':
+                last_sold = '_{8} ' + str(costs_list[-1])
+                pattern, median_text = r'/\d+', '/' + str(median)
+            else:
+                pattern, median_text = r'\d+/', str(median) + '/'
+            value['cost'] = re.sub(pattern, median_text, cost)
+        text += '{3} ' + str(median) + '_' + \
+                '{4} ' + str(average) + '_' + \
+                '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
+                '{6} ' + str(cancelled_count) + '_' + \
+                '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
+                last_sold
+        value['stats'] = text
+    if item['stats_count'] is None:
+        value.update({
+            'item_id': item['item_id'],
+            'quality': item['quality'],
+            'item_name': server['item_ids'].get(item['item_id'])
+        })
+        db.insert('stats', value, primary_key='id')
+        del value['cost']
+        del value['stats']
+        value.update({'price': len(lots), 'lot_count': len(lots)})
+        db.insert('statistics', value, primary_key='id', commit=commit_query)
+    else:
+        db.update_stat(item['item_id'], item['quality'], value)
+        del value['cost']
+        del value['stats']
+        value.update({'price': len(lots), 'lot_count': len(lots)})
+        db.update_statistics(item['item_id'], item['quality'], value, commit=commit_query)
+    if item['quality'] is None:
+        item['quality'] = 'Common'
+        common_lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
+        if len(common_lots) != len(lots):
+            create_stats(db, item)
+
+
 def stats_calculator():
-    clear_stats = {'costs_list_full': [], 'costs_list_week': [],
-                   'unsold_count_full': 0, 'unsold_count_week': 0,
-                   'cancelled_count_full': 0, 'cancelled_count_week': 0}
     while True:
         if server['storage_reload'] is False:
             try:
                 Auth.dev.printer('Начало')
-                db = SQL()
-                db.create_table_stats()
-                const, qualities = {}, [None]
-                time_week = time_now() - (7 * 24 * 60 * 60)
-                qualities.extend(db.get_distinct_qualities())
-                item_ids = {value: key for key, value in server['item_names'].items()}
-                starting_items_creation(gspread.service_account(server['json2']).open('Notify'))
-                for item_id in item_ids:
-                    stats = {}
-                    stamp = datetime.now().timestamp()
-                    const.update({item_id: {}})
-                    for quality in qualities:
-                        stats.update({quality: deepcopy(clear_stats)})
-                    for lot in db.get_ended_lots_by_item_id(item_id):
-                        for quality in qualities:
-                            if (lot['quality'] == quality or quality is None
-                                    or (quality == 'Common' and lot['quality'] is None)):
-                                if lot['status'] != 'Cancelled':
-                                    if lot['buyer_castle'] is not None:
-                                        stats[quality]['costs_list_full'].append(lot['price'])
-                                        if lot['stamp'] >= time_week:
-                                            stats[quality]['costs_list_week'].append(lot['price'])
-                                    else:
-                                        stats[quality]['unsold_count_full'] += 1
-                                        if lot['stamp'] >= time_week:
-                                            stats[quality]['unsold_count_week'] += 1
-                                else:
-                                    stats[quality]['cancelled_count_full'] += 1
-                                    if lot['stamp'] >= time_week:
-                                        stats[quality]['cancelled_count_week'] += 1
-
-                    for quality in list(stats):
-                        if quality is not None and stats[quality] == clear_stats:
-                            del stats[quality]
-
-                    if len(stats) == 2 and stats.get(None) and stats.get('Common') and stats[None] == stats['Common']:
-                        del stats['Common']
-
-                    for quality in qualities:
-                        if stats.get(quality):
-                            const[item_id][quality] = {'cost': '0/0', 'stats': ''}
-                            costs_list_full = stats[quality]['costs_list_full']
-                            text = bold('{0} ') + str(len(costs_list_full)) + '__'
-                            for title in ['{1}', '{2}']:
-                                median = 0
-                                minimum = 0
-                                maximum = 0
-                                average = 0
-                                last_sold = ''
-                                text += bold(title) + '_'
-                                if title == '{1}':
-                                    last_sold = '__'
-                                    costs_list = costs_list_full
-                                    unsold_count = stats[quality]['unsold_count_full']
-                                    cancelled_count = stats[quality]['cancelled_count_full']
-                                else:
-                                    costs_list = stats[quality]['costs_list_week']
-                                    unsold_count = stats[quality]['unsold_count_week']
-                                    cancelled_count = stats[quality]['cancelled_count_week']
-                                if len(costs_list) > 0:
-                                    minimum = min(costs_list)
-                                    maximum = max(costs_list)
-                                    cost = const[item_id][quality]['cost']
-                                    median = median_function(costs_list)
-                                    average = round(mean(costs_list), 2)
-                                    median = int(median) if float(median).is_integer() else median
-                                    if title == '{2}':
-                                        last_sold = '_{8} ' + str(costs_list[-1])
-                                        pattern, median_text = r'/\d+', '/' + str(median)
-                                    else:
-                                        pattern, median_text = r'\d+/', str(median) + '/'
-                                    const[item_id][quality]['cost'] = re.sub(pattern, median_text, cost)
-                                text += '{3} ' + str(median) + '_' + \
-                                    '{4} ' + str(average) + '_' + \
-                                    '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
-                                    '{6} ' + str(cancelled_count) + '_' + \
-                                    '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
-                                    last_sold
-                            const[item_id][quality]['stats'] = text
-                    print(datetime.now().timestamp() - stamp, item_id, item_ids.get(item_id), const[item_id])
-
-                new_stats = []
-                for item_id, stat in const.items():
-                    for quality, values in stat.items():
-                        count = db.update_stat(item_id, quality, values)
-                        if count <= 0:
-                            values.update({
-                                'item_id': item_id, 'item_name': item_ids.get(item_id), 'quality': quality})
-                            new_stats.append(values)
-                db.insert_many('stats', new_stats, primary_key='id', commit=True)
-                db.close()
+                server.update(update_const_items(gspread.service_account(server['json2']).open('Notify')))
+                with SQL() as db:
+                    for item in db.get_all_lot_counts():
+                        if item['item_id'] and item['lot_count'] != item['stats_count']:
+                            create_stats(db, item)
                 Auth.dev.printer('конец')
+                sleep(300)
             except IndexError and Exception:
                 sleep(500)
                 Auth.dev.thread_except()
@@ -284,11 +218,12 @@ def storage_reloader():
     global server
     try:
         Auth.dev.printer('Перезагрузка всей базы лотов')
+        server = const_creation()
+        server.update({'storage_reload': True})
+
         db = SQL()
         params_list = {}
         need_hard_handle = []
-        db.create_table_lots()
-        server.update({'storage_reload': True})
         lot_barrier, calculated_lot_barrier = 1, 1
         client = gspread.service_account(server['json2'])
         spreadsheet_names = [pre + server['storage'] for pre in ['', 'temp-']]

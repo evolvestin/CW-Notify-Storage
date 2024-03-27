@@ -52,6 +52,12 @@ class SQL:
             except IndexError and Exception:
                 connected = False
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.connection.close()
+
     # ------------------------------------------------------------------------------------------ UTILITY BEGIN
     def close(self):
         self.connection.close()
@@ -171,9 +177,12 @@ class SQL:
         result = self.request("SELECT DISTINCT quality FROM lots WHERE NOT quality = ''")
         return [record['quality'] for record in list(result)]
 
-    def get_ended_lots_by_item_id(self, item_id) -> list:
-        query = f"SELECT * FROM lots WHERE NOT status = '#active' AND item_id = '{item_id}' ORDER BY stamp"
-        return self.request(query)
+    def get_ended_lots_by_item_id(self, item_id: str, quality: str = None) -> list:
+        quality_condition = ''
+        if quality:
+            quality_condition = 'AND quality IS NULL' if quality.lower() == 'common' else f"AND quality = '{quality}'"
+        return self.request(f"SELECT * FROM lots WHERE item_id = '{item_id}' {quality_condition} "
+                            f"AND NOT status = '#active' ORDER BY stamp")
 
     def get_distinct_names_by_params(self, lot: dict, depth: int = 1):
         query = f"SELECT DISTINCT item_name FROM lots WHERE item_id IS NOT NULL AND params = '{lot['params']}'"
@@ -188,7 +197,7 @@ class SQL:
             integer_default = 'DEFAULT NULL' if column in ['enchant'] else 'DEFAULT 0 NOT NULL'
             column += f' {integer_format} {integer_default}' if column in lot_integer_columns else ' TEXT NULL'
             columns.append(column)
-        columns.append('CONSTRAINT lots_pkey PRIMARY KEY (post_id)')
+        columns.append('CONSTRAINT post_id_primary_key PRIMARY KEY (post_id)')
         self.request(f"CREATE TABLE IF NOT EXISTS lots ({', '.join(columns)});")
         self.request(f"CREATE INDEX IF NOT EXISTS index_lot_id ON lots (lot_id);")
         self.request(f"CREATE INDEX IF NOT EXISTS index_item_id ON lots (item_id);")
@@ -197,12 +206,40 @@ class SQL:
 
     # ------------------------------------------------------------------------------------------ STATS BEGIN
     def update_stat(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
-        quality_condition = "= '{quality}'" if quality else 'IS NULL'
+        quality_condition = f"= '{quality}'" if quality else 'IS NULL'
         result = self.request(
             f"UPDATE stats SET {self.update_items(record)} "
             f"WHERE item_id = '{item_id}' AND quality {quality_condition}", return_row_count=True)
         self.commit() if commit else None
         return result
+
+    def update_statistics(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
+        quality_condition = f"= '{quality}'" if quality else 'IS NULL'
+        result = self.request(
+            f"UPDATE statistics SET {self.update_items(record)} "
+            f"WHERE item_id = '{item_id}' AND quality {quality_condition}", return_row_count=True)
+        self.commit() if commit else None
+        return result
+
+    def get_all_lot_counts(self):
+        lot_count = (f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
+                     f"AND COALESCE(quality, 'NULL') = COALESCE(finder_quality, 'NULL') LIMIT 1")
+        query = (f"SELECT item_id, quality, item_id as finder_item_id, "
+                 f"COALESCE(quality, 'NULL') AS finder_quality, COUNT(*) AS lot_count "
+                 f"FROM lots GROUP BY item_id, quality")
+        return self.request(f"SELECT *, ({lot_count}) AS stats_count FROM ({query}) AS Q")
+
+    def create_table_statistics(self) -> None:
+        integer_columns = ['lot_count', 'price']
+        columns = ['id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
+                   '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
+        for column in ['item_id', 'item_name', 'quality', 'lot_count', 'price']:
+            integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
+            column += f' {integer_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
+            columns.append(column)
+        columns.append('CONSTRAINT id_primary_key PRIMARY KEY (id)')
+        self.request(f"CREATE TABLE IF NOT EXISTS statistics ({', '.join(columns)});")
+        self.commit()
 
     def create_table_stats(self) -> None:
         integer_columns = []
