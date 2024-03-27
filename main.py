@@ -184,12 +184,14 @@ def create_stats(db: SQL, item: dict):
         del value['stats']
         value.update({'price': len(lots), 'lot_count': len(lots)})
         db.insert('statistics', value, primary_key='id', commit=commit_query)
+        print(f"CREATED {item['item_id']}", time_now(iso=True))
     else:
         db.update_stat(item['item_id'], item['quality'], value)
         del value['cost']
         del value['stats']
         value.update({'price': len(lots), 'lot_count': len(lots)})
         db.update_statistics(item['item_id'], item['quality'], value, commit=commit_query)
+        print(f"UPDATED {item['item_id']}", time_now(iso=True))
     if item['quality'] is None:
         item['quality'] = 'Common'
         common_lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])

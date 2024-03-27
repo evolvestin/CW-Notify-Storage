@@ -173,10 +173,6 @@ class SQL:
     def get_active_lots(self) -> list:
         return self.request("SELECT * FROM lots WHERE status = '#active'")
 
-    def get_distinct_qualities(self) -> list:
-        result = self.request("SELECT DISTINCT quality FROM lots WHERE NOT quality = ''")
-        return [record['quality'] for record in list(result)]
-
     def get_ended_lots_by_item_id(self, item_id: str, quality: str = None) -> list:
         quality_condition = ''
         if quality:
