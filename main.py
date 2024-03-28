@@ -211,7 +211,7 @@ def stats_calculator():
                 with SQL() as db:
                     for item in db.get_all_lot_counts():
                         if item['item_id'] and item['lot_count'] != item['stats_count']:
-                            create_stats(db, item)
+                            create_stats(db, dict(item))
                 Auth.dev.printer('конец')
                 sleep(300)
             except IndexError and Exception:
