@@ -173,18 +173,23 @@ class SQL:
     def get_active_lots(self) -> list:
         return self.request("SELECT * FROM lots WHERE status = '#active'")
 
-    def get_ended_lots_by_item_id(self, item_id: str, quality: str = None) -> list:
-        quality_condition = ''
-        if quality:
-            quality_condition = 'AND quality IS NULL' if quality.lower() == 'common' else f"AND quality = '{quality}'"
-        return self.request(f"SELECT * FROM lots WHERE item_id = '{item_id}' {quality_condition} "
-                            f"AND NOT status = '#active' ORDER BY stamp")
+    def is_item_has_qualities(self, item_id: str) -> bool:
+        result = self.request(
+            f"SELECT * FROM lots WHERE item_id = '{item_id}' AND quality IS NOT NULL LIMIT 1", fetchone=True)
+        return True if result else False
 
     def get_distinct_names_by_params(self, lot: dict, depth: int = 1):
         query = f"SELECT DISTINCT item_name FROM lots WHERE item_id IS NOT NULL AND params = '{lot['params']}'"
         query += f" AND quality = '{lot['quality']}'" if depth in [2, 3] else ''
         query += f" AND enchant = '{lot['enchant']}'" if depth == 3 else ''
         return self.request(query)
+
+    def get_ended_lots_by_item_id(self, item_id: str, quality: str = None) -> list:
+        quality_condition = ''
+        if quality is not None:
+            quality_condition = 'AND quality IS NULL' if quality.lower() == 'common' else f"AND quality = '{quality}'"
+        return self.request(f"SELECT * FROM lots WHERE item_id = '{item_id}' {quality_condition} "
+                            f"AND NOT status = '#active' ORDER BY stamp")
 
     def create_table_lots(self) -> None:
         columns = []
@@ -218,12 +223,12 @@ class SQL:
         return result
 
     def get_all_lot_counts(self):
-        lot_count = (f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
-                     f"AND COALESCE(quality, 'NULL') = COALESCE(finder_quality, 'NULL') LIMIT 1")
+        stats_count = (f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
+                       f"AND COALESCE(quality, 'Common') = COALESCE(finder_quality, 'Common') LIMIT 1")
         query = (f"SELECT item_id, quality, item_id as finder_item_id, "
-                 f"COALESCE(quality, 'NULL') AS finder_quality, COUNT(*) AS lot_count "
+                 f"COALESCE(quality, 'Common') AS finder_quality, COUNT(*) AS lot_count "
                  f"FROM lots GROUP BY item_id, quality")
-        return self.request(f"SELECT *, ({lot_count}) AS stats_count FROM ({query}) AS Q")
+        return self.request(f"SELECT *, ({stats_count}) AS stats_count FROM ({query}) AS Q")
 
     def create_table_statistics(self) -> None:
         integer_columns = ['lot_count', 'price']

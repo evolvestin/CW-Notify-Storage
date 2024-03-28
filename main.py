@@ -114,6 +114,10 @@ def lot_telegram_updater():
 
 
 def create_stats(db: SQL, item: dict):
+    if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
+        item.update({'quality': 'Common'})
+    item.update({'quality': None}) if item['quality'] == 'ALL' else None
+
     time_week = time_now() - (7 * 24 * 60 * 60)
     lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
     stats = {'costs_list_full': [], 'costs_list_week': [],
@@ -192,11 +196,10 @@ def create_stats(db: SQL, item: dict):
         value.update({'price': len(lots), 'lot_count': len(lots)})
         db.update_statistics(item['item_id'], item['quality'], value, commit=commit_query)
         print(f"UPDATED {item['item_id']}", time_now(iso=True))
-    if item['quality'] is None:
-        item['quality'] = 'Common'
-        common_lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
-        if len(common_lots) != len(lots):
-            create_stats(db, item)
+
+    if item['quality'] is not None:
+        item.update({'quality': 'ALL'})
+        create_stats(db, item)
 
 
 def stats_calculator():
