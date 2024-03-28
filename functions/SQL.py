@@ -228,7 +228,7 @@ class SQL:
             f"AND COALESCE(quality, 'Common') = COALESCE(finder_quality, 'Common') ORDER BY id DESC LIMIT 1")
         query = (f"SELECT item_id, quality, item_id as finder_item_id, "
                  f"COALESCE(quality, 'Common') AS finder_quality, COUNT(*) AS lot_count "
-                 f"FROM lots GROUP BY item_id, quality")
+                 f"FROM lots WHERE NOT status = '#active' GROUP BY item_id, quality")
         return self.request(f"SELECT *, ({stats_count}) AS stats_count FROM ({query}) AS Q")
 
     def create_table_statistics(self) -> None:

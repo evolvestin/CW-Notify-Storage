@@ -113,10 +113,6 @@ def lot_telegram_updater():
 
 
 def create_stats(db: SQL, item: dict):
-    if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
-        item.update({'quality': 'Common'})
-    item.update({'quality': None}) if item['quality'] == 'ALL' else None
-
     time_week = time_now() - (7 * 24 * 60 * 60)
     lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
     stats = {'costs_list_full': [], 'costs_list_week': [],
@@ -197,10 +193,6 @@ def create_stats(db: SQL, item: dict):
         db.update_statistics(item['item_id'], item['quality'], value, commit=commit_query)
         print(f"UPDATED {item['item_id']} {item['quality']}", time_now(iso=True))
 
-    if item['quality'] is not None:
-        item.update({'quality': 'ALL'})
-        create_stats(db, item)
-
 
 def stats_calculator():
     while True:
@@ -211,7 +203,13 @@ def stats_calculator():
                 with SQL() as db:
                     for item in db.get_all_lot_counts():
                         if item['item_id'] and item['lot_count'] != item['stats_count']:
-                            create_stats(db, dict(item))
+                            item = dict(item)
+                            if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
+                                item.update({'quality': 'Common'})
+                            create_stats(db, item)
+                            if item['quality'] is not None:
+                                item.update({'quality': None})
+                                create_stats(db, item)
                 Auth.dev.printer('конец')
                 sleep(300)
             except IndexError and Exception:
