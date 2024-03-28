@@ -215,7 +215,6 @@ def stats_calculator():
                 Auth.dev.printer('конец')
                 sleep(300)
             except IndexError and Exception:
-                sleep(500)
                 Auth.dev.thread_except()
 
 
