@@ -232,7 +232,7 @@ def storage_reloader():
         lot_barrier, calculated_lot_barrier = 1, 1
         client = gspread.service_account(server['json2'])
         spreadsheet_names = [pre + server['storage'] for pre in ['', 'temp-']]
-        soup = BeautifulSoup(requests.get(f"{server['link: new_lot_id']}?embed=1").text, 'html.parser')
+        soup = BeautifulSoup(requests.get(f"{server['link: lot_updater_post_id']}?embed=1").text, 'html.parser')
 
         if soup.find('div', class_='tgme_widget_message_error') is None:
             raw = str(soup.find('div', class_='tgme_widget_message_text js-message_text')).replace('<br/>', '\n')
