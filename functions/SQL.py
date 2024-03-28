@@ -223,8 +223,9 @@ class SQL:
         return result
 
     def get_all_lot_counts(self):
-        stats_count = (f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
-                       f"AND COALESCE(quality, 'Common') = COALESCE(finder_quality, 'Common') LIMIT 1")
+        stats_count = (
+            f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
+            f"AND COALESCE(quality, 'Common') = COALESCE(finder_quality, 'Common') ORDER BY id DESC LIMIT 1")
         query = (f"SELECT item_id, quality, item_id as finder_item_id, "
                  f"COALESCE(quality, 'Common') AS finder_quality, COUNT(*) AS lot_count "
                  f"FROM lots GROUP BY item_id, quality")
