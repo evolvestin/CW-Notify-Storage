@@ -177,7 +177,9 @@ def create_stats(db: SQL, item: dict):
                 '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
                 last_sold
         value['stats'] = text
-    if item['stats_count'] is None:
+
+    updated_rows = db.update_stat(item['item_id'], item['quality'], value)
+    if updated_rows == 0:
         value.update({
             'item_id': item['item_id'],
             'quality': item['quality'],
@@ -190,7 +192,6 @@ def create_stats(db: SQL, item: dict):
         db.insert('statistics', value, primary_key='id', commit=commit_query)
         print(f"CREATED {item['item_id']}", time_now(iso=True))
     else:
-        db.update_stat(item['item_id'], item['quality'], value)
         del value['cost']
         del value['stats']
         value.update({'price': len(lots), 'lot_count': len(lots)})
