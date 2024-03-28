@@ -47,7 +47,6 @@ def const_creation() -> dict:
         server.update({f'json{search_json.group(1)}': base_dir.joinpath(file_name)}) if search_json else None
 
     server.update({
-        'start_message': None,
         'storage_reload': False,
         'spreadsheet': gspread.service_account(server['json2']).open('Notify'),
     })

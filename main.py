@@ -56,9 +56,8 @@ def start(stamp):
     global server
     if os.environ.get('server') == 'local':
         threads = [stats_calculator]
-        server.update({'start_message': Auth.dev.start(stamp)})
     else:
-        server.update({'start_message': Auth.dev.start(stamp)})
+        Auth.dev.start(stamp)
         threads = [lot_detector, stats_calculator, lot_telegram_updater]
     for thread_element in threads:
         _thread.start_new_thread(thread_element, ())
@@ -225,6 +224,7 @@ def storage_reloader():
         Auth.dev.printer('Перезагрузка всей базы лотов')
         server = const_creation()
         server.update({'storage_reload': True})
+        dev_message = Auth.message(text=f'{Auth.time()} Reload started.', tag=code)
 
         db = SQL()
         params_list = {}
@@ -258,11 +258,9 @@ def storage_reloader():
                         elif lot['post_id'] is not None:
                             need_hard_handle.append(lot)
                     db.insert_many('lots', lots, primary_key='post_id', commit=True)
-                    if server['start_message']:
-                        start_message = deepcopy(Auth.message(
-                            tag=code, old_message=server['start_message'],
-                            text=f'\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}'))
-                        server.update({'start_message': start_message})
+                    dev_message = deepcopy(Auth.message(
+                        tag=code, old_message=dev_message,
+                        text=f'\nworksheet-{worksheet.title} {datetime.now().timestamp() - stamp}'))
                     Auth.dev.printer(f'worksheet-{worksheet.title} {datetime.now().timestamp() - stamp}')
         hard_handled = [lot_handler.hard_item_id_search(lot, params_list) for lot in need_hard_handle]
         db.insert_many('lots', hard_handled, primary_key='post_id', commit=True)
@@ -275,8 +273,7 @@ def storage_reloader():
         db.insert_many('lots', not_stored, primary_key='post_id', commit=True)
         server.update({'storage_reload': False})
         db.close()
-        if server['start_message']:
-            Auth.message(old_message=server['start_message'], text=f'\n{Auth.time()} Reload ended.', tag=code)
+        Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Reload ended.', tag=code)
     except IndexError and Exception:
         Auth.dev.thread_except()
 
