@@ -124,12 +124,12 @@ class LotHandler:
                         status = 'Cancelled' if search.group(1) == 'Failed' else search.group(1)
                         lot.update({key: 'Finished' if status == '#active' and lot['stamp'] < now else status})
                     elif key == 'modifiers':
-                        lot_modifiers = re.sub('/', '\n', search.group(1))
+                        lot_modifiers = search.group(1)
                         if re.search('[а-яА-Я]', lot_modifiers):
-                            for cyrillic_modifier, real_modifier in cyrillic_modifiers:
+                            for cyrillic_modifier, real_modifier in cyrillic_modifiers.items():
                                 if cyrillic_modifier in lot_modifiers:
                                     lot_modifiers = re.sub(cyrillic_modifier, real_modifier, lot_modifiers)
-                        lot.update({key: lot_modifiers})
+                        lot.update({key: re.sub('/', '\n', lot_modifiers)})
                     elif key in ['seller', 'buyer']:
                         name = search.group(1)
                         guild_search = re.search(r'\[(.*?)]', name)
