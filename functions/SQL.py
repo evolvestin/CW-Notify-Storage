@@ -70,7 +70,7 @@ class SQL:
             try:
                 cursor.execute(sql)
                 if return_row_count is False:
-                    if cursor.description:
+                    if cursor.description and cursor.rowcount:
                         return dict(cursor.fetchone()) if fetchone else list(cursor.fetchall())
                     else:
                         return None
