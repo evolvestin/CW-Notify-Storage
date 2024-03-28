@@ -7,7 +7,7 @@ from ast import literal_eval
 from settings import base_dir
 from functions.SQL import SQL
 from functions.GDrive import Drive
-from functions.lot_handler import raw_symbols
+from functions.lot_constants import raw_symbols
 from functions.objects import t_me, sub_blank, environmental_files
 
 
@@ -32,8 +32,12 @@ def update_const_items(spreadsheet: gspread.models.Spreadsheet, name: str = 'ite
     symbols = raw_symbols.format(''.join(emojis), '{}')
     symbols += f"|{'|'.join(long_emojis)}" if len(long_emojis) > 0 else ''
     return {
-        'item_ids': item_ids, 'allowed_to': allowed_to,
-        'item_names': item_names, 'item_tiers': item_tiers, 'symbols': symbols}
+        'symbols': symbols,
+        'item_ids': item_ids,
+        'allowed_to': allowed_to,
+        'item_names': item_names,
+        'item_tiers': item_tiers,
+    }
 
 
 def const_creation() -> dict:

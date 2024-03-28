@@ -2,8 +2,8 @@ import re
 from timer import timer
 from datetime import datetime
 from functions.objects import sub_blank
+from functions.lot_constants import cyrillic_modifiers
 from functions.SQL import SQL, lot_columns, lot_integer_columns
-raw_symbols = r"[-0-9a-zA-Zа-яА-ЯёЁ\s_{}!#?$%&='*\[\]+.^{}()`⚡|~@:;/\\]"
 
 
 class LotHandler:
@@ -113,16 +113,23 @@ class LotHandler:
                         lot.update({key: timer(search)})
                     elif key == 'price':
                         lot.update({key: int(search.group(1))})
-                    elif key == 'modifiers':
-                        lot.update({key: re.sub('/', '\n', search.group(1))})
                     elif key == 'condition':
                         lot.update({key: re.sub(' ⏰.*', '', search.group(1))})
+                    elif key == 'quality':
+                        lot.update({key: search.group(1) if search.group(1) else None})
                     elif key == 'title':
                         lot.update({'lot_id': int(search.group(1))})
                         lot = self.search_lot_title(lot, search.group(2))
                     elif key == 'status':
                         status = 'Cancelled' if search.group(1) == 'Failed' else search.group(1)
                         lot.update({key: 'Finished' if status == '#active' and lot['stamp'] < now else status})
+                    elif key == 'modifiers':
+                        lot_modifiers = re.sub('/', '\n', search.group(1))
+                        if re.search('[а-яА-Я]', lot_modifiers):
+                            for cyrillic_modifier, real_modifier in cyrillic_modifiers:
+                                if cyrillic_modifier in lot_modifiers:
+                                    lot_modifiers = re.sub(cyrillic_modifier, real_modifier, lot_modifiers)
+                        lot.update({key: lot_modifiers})
                     elif key in ['seller', 'buyer']:
                         name = search.group(1)
                         guild_search = re.search(r'\[(.*?)]', name)
