@@ -65,20 +65,16 @@ def update_stats_records(item: dict):
         Auth.dev.executive(None)
 
 
-def stats_reloader():
+def stats_reloader(update_all: bool):
     global server
     if server['storage_reload'] is False:
         try:
-            stamp = datetime.now().timestamp()
             dev_message = Auth.message(text=f'{Auth.time()} Stats reload started.', tag=code)
             server.update(update_const_items(gspread.service_account(server['json2']).open('Notify')))
             with SQL() as db:
                 lot_counts = db.get_all_lot_counts()
-            dev_message = deepcopy(Auth.message(
-                tag=code, old_message=dev_message,
-                text=f'\nRecreated tables {datetime.now().timestamp() - stamp}'))
             for item in lot_counts:
-                if item['item_id'] and item['lot_count'] != item['stats_count']:
+                if item['item_id'] and (update_all or item['lot_count'] != item['stats_count']):
                     update_stats_records(dict(item))
             Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Stats reload ended.', tag=code)
         except IndexError and Exception:
@@ -114,12 +110,13 @@ async def message_handler(message: types.Message):
             elif message.text.startswith('/reload_stats'):
                 text = 'Перезагружаем базу статистики.'
                 if 'full' in message.text:
+                    text += ' С пересозданием.'
                     with SQL() as db:
                         db.request('DROP TABLE statistics;'), db.request('DROP TABLE stats;')
                         db.commit()
                         db.create_table_statistics(), db.create_table_stats()
                         db.commit()
-                _thread.start_new_thread(stats_reloader, ())
+                _thread.start_new_thread(stats_reloader, (True if 'all' in message.text else False,))
             else:
                 text = 'Бот статистики функционирует в штатном режиме.'
             await bot.send_message(message.chat.id, text, parse_mode='HTML')
