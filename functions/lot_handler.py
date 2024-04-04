@@ -42,13 +42,13 @@ class LotHandler:
                         lot = self.engrave(lot, item_name)
                         break
             else:  # Search by params (in database)
-                db, names = SQL(), []
-                params_item_names = db.get_distinct_names_by_params(lot, depth=1)
-                if len(params_item_names) > 1:
-                    params_item_names = db.get_distinct_names_by_params(lot, depth=2)
+                names = []
+                with SQL() as db:
+                    params_item_names = db.get_distinct_names_by_params(lot, depth=1)
                     if len(params_item_names) > 1:
-                        params_item_names = db.get_distinct_names_by_params(lot, depth=3)
-                db.close()
+                        params_item_names = db.get_distinct_names_by_params(lot, depth=2)
+                        if len(params_item_names) > 1:
+                            params_item_names = db.get_distinct_names_by_params(lot, depth=3)
                 for record in params_item_names:
                     names.append(record['item_name']) if record['item_name'] in lot['item_name'] else None
                 if len(names) >= 1:

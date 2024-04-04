@@ -7,6 +7,7 @@ from environ import environ
 from functions.objects import divide
 from psycopg2.extras import DictCursor
 from sshtunnel import SSHTunnelForwarder
+from datetime import datetime, timezone, timedelta
 
 if environ == 'local':
     print('POSTGRESQL через SSH')
@@ -200,9 +201,50 @@ class SQL:
             columns.append(column)
         columns.append('CONSTRAINT post_id_primary_key PRIMARY KEY (post_id)')
         self.request(f"CREATE TABLE IF NOT EXISTS lots ({', '.join(columns)});")
-        self.request(f"CREATE INDEX IF NOT EXISTS index_lot_id ON lots (lot_id);")
-        self.request(f"CREATE INDEX IF NOT EXISTS index_item_id ON lots (item_id);")
+        self.request(f'CREATE INDEX IF NOT EXISTS index_lot_id ON lots (lot_id);')
+        self.request(f'CREATE INDEX IF NOT EXISTS index_item_id ON lots (item_id);')
         self.commit()
+
+    def get_statistics_by_item_id(self, item_id: str, quality: str = None) -> dict:
+        queries = {}
+        quality_condition = ''
+        periods = {'all': None, 'month': 30, 'week': 7}
+        now = datetime.now(timezone(timedelta(hours=0)))
+        median_percentile = 'PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price)'
+        if quality is not None:
+            quality_condition = 'AND quality IS NULL' if quality.lower() == 'common' else f"AND quality = '{quality}'"
+
+        normal_condition = f"item_id = '{item_id}' {quality_condition} AND NOT status = '#active'"
+        sold_condition = f"{normal_condition} AND buyer_castle IS NOT NULL AND NOT status = 'Cancelled'"
+
+        count_select = f"SELECT COUNT(*) FROM lots WHERE {normal_condition}"
+        median_price = f'SELECT {median_percentile} AS median_price FROM lots WHERE {sold_condition}'
+        absolute_deviation = f"SELECT ABS(price - ({median_price})) AS price, stamp FROM lots WHERE {sold_condition}"
+
+        stats_queries = {
+            'count': count_select,
+            'median_price': median_price,
+            'cancelled': f"{count_select} AND status = 'Cancelled'",
+            'sold': f'SELECT COUNT(*) FROM lots WHERE {sold_condition}',
+            'average_price': f'SELECT AVG(price) FROM lots WHERE {sold_condition}',
+            'minimum_price': f'SELECT MIN(price) FROM lots WHERE {sold_condition}',
+            'maximum_price': f'SELECT MAX(price) FROM lots WHERE {sold_condition}',
+            'unsold': f"{count_select} AND buyer_castle IS NULL AND NOT status = 'Cancelled'",
+            'mad': f'SELECT {median_percentile} AS mad FROM ({absolute_deviation}) AS Q WHERE stamp IS NOT NULL',
+        }
+
+        for period, days in periods.items():
+            time_ago = (now - timedelta(days=days if days else 0)).timestamp()
+            period_condition = f' AND stamp >= {time_ago}' if days else ''
+            for key, value in stats_queries.items():
+                queries.update({f'{period}_{key}': f'{value}{period_condition}'})
+        query = ', '.join([f"COALESCE(({value})::DECIMAL, 0) AS {key}" for key, value in queries.items()])
+        result = {period: {} for period in periods}
+        for key, value in self.request(f"SELECT {query}", fetchone=True).items():
+            for period in periods:
+                if key.startswith(f'{period}_'):
+                    result[period].update({re.sub(f'{period}_', '', key, 1): value})
+        return result
     # ------------------------------------------------------------------------------------------ LOTS END
 
     # ------------------------------------------------------------------------------------------ STATS BEGIN
@@ -214,7 +256,7 @@ class SQL:
         self.commit() if commit else None
         return result
 
-    def update_statistics(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
+    def update_statistics_record(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
         quality_condition = f"= '{quality}'" if quality else 'IS NULL'
         result = self.request(
             f"UPDATE statistics SET {self.update_items(record)} "
@@ -235,7 +277,7 @@ class SQL:
         integer_columns = ['lot_count', 'price']
         columns = ['id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
                    '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
-        for column in ['item_id', 'item_name', 'quality', 'lot_count', 'price']:
+        for column in ['item_id', 'item_name', 'quality', 'lot_count', 'price', 'stats']:
             integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
             column += f' {integer_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
             columns.append(column)
