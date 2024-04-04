@@ -9,7 +9,6 @@ import requests
 from time import sleep
 from copy import deepcopy
 from aiogram import types
-from decimal import Decimal
 from statistics import mean
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -38,7 +37,7 @@ async def update_lots(client: TelegramClient, ids: list) -> None:
             db.update('lots', lot['post_id'], lot, commit=True) if lot.get('post_id') else None
             if lot.get('item_id') is not None and lot.get('status') != '#active':
                 item = {'item_id': lot['item_id'], 'quality': lot.get('status')}
-                _thread.start_new_thread(update_stats_records, (db, item))
+                _thread.start_new_thread(update_stats_records, (item,))
 
 
 def start(stamp):
@@ -53,35 +52,37 @@ def start(stamp):
     executor.start_polling(dispatcher)
 
 
-def update_stats_records(db: SQL, item: dict):
+def update_stats_records(item: dict):
     try:
-        if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
-            item.update({'quality': 'Common'})
-        create_stats(db, item)
-        update_statistics(db, item)
-        if item['quality'] is not None:
-            item.update({'quality': None})
-            create_stats(db, item)
-            update_statistics(db, item)
+        with SQL() as db:
+            if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
+                item.update({'quality': 'Common'})
+            create_stats(db, item), update_statistics(db, item)
+            if item['quality'] is not None:
+                item.update({'quality': None})
+                create_stats(db, item), update_statistics(db, item)
     except IndexError and Exception:
         Auth.dev.executive(None)
 
 
-@dispatcher.message_handler()
-async def message_handler(message: types.Message):
-    try:
-        if message.chat.id > 0:
-            if message.text == '/reload':
-                text = 'Перезагружаем базу данных.'
-                _thread.start_new_thread(storage_reloader, ())
-            elif message.text == '/reload_stats':
-                text = 'Перезагружаем базу статистики.'
-                _thread.start_new_thread(stats_reloader, ())
-            else:
-                text = 'Бот статистики функционирует в штатном режиме.'
-            await bot.send_message(message.chat.id, text, parse_mode='HTML')
-    except IndexError and Exception:
-        Auth.dev.async_except(message)
+def stats_reloader():
+    global server
+    if server['storage_reload'] is False:
+        try:
+            stamp = datetime.now().timestamp()
+            dev_message = Auth.message(text=f'{Auth.time()} Stats reload started.', tag=code)
+            server.update(update_const_items(gspread.service_account(server['json2']).open('Notify')))
+            with SQL() as db:
+                lot_counts = db.get_all_lot_counts()
+            dev_message = deepcopy(Auth.message(
+                tag=code, old_message=dev_message,
+                text=f'\nRecreated tables {datetime.now().timestamp() - stamp}'))
+            for item in lot_counts:
+                if item['item_id'] and item['lot_count'] != item['stats_count']:
+                    update_stats_records(dict(item))
+            Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Stats reload ended.', tag=code)
+        except IndexError and Exception:
+            Auth.dev.thread_except()
 
 
 def update_statistics(db: SQL, item: dict) -> None:
@@ -103,6 +104,29 @@ def update_statistics(db: SQL, item: dict) -> None:
         db.insert('statistics', value, primary_key='id', commit=commit_query)
 
 
+@dispatcher.message_handler()
+async def message_handler(message: types.Message):
+    try:
+        if message.chat.id > 0:
+            if message.text == '/reload':
+                text = 'Перезагружаем базу данных.'
+                _thread.start_new_thread(storage_reloader, ())
+            elif message.text.startswith('/reload_stats'):
+                text = 'Перезагружаем базу статистики.'
+                if 'full' in message.text:
+                    with SQL() as db:
+                        db.request('DROP TABLE statistics;'), db.request('DROP TABLE stats;')
+                        db.commit()
+                        db.create_table_statistics(), db.create_table_stats()
+                        db.commit()
+                _thread.start_new_thread(stats_reloader, ())
+            else:
+                text = 'Бот статистики функционирует в штатном режиме.'
+            await bot.send_message(message.chat.id, text, parse_mode='HTML')
+    except IndexError and Exception:
+        Auth.dev.async_except(message)
+
+
 def lot_detector():
     try:
         asyncio.set_event_loop(asyncio.new_event_loop())
@@ -113,12 +137,12 @@ def lot_detector():
             async def post_handler(response):
                 if response:
                     lot = lot_handler.lot_from_message(response.message)
-                    with SQL() as db:
-                        if lot.get('post_id'):
+                    if lot.get('post_id'):
+                        with SQL() as db:
                             db.insert('lots', lot, primary_key='post_id', commit=True)
-                        if lot.get('item_id') is not None and lot.get('status') != '#active':
-                            item = {'item_id': lot['item_id'], 'quality': lot.get('status')}
-                            _thread.start_new_thread(update_stats_records, (db, item))
+                    if lot.get('item_id') is not None and lot.get('status') != '#active':
+                        item = {'item_id': lot['item_id'], 'quality': lot.get('status')}
+                        _thread.start_new_thread(update_stats_records, (item,))
                     Auth.dev.printer(f'Обновление: {lot}')
             Auth.dev.printer(f"detector() в работе: {server['channel']}")
             client.run_until_disconnected()
@@ -150,33 +174,6 @@ def lot_telegram_updater():
                 Auth.dev.executive(None)
                 _thread.start_new_thread(lot_telegram_updater, ())
                 _thread.exit()
-
-
-def stats_reloader():
-    global server
-    if server['storage_reload'] is False:
-        try:
-            stamp = datetime.now().timestamp()
-            dev_message = Auth.message(text=f'{Auth.time()} Stats reload started.', tag=code)
-            server.update(update_const_items(gspread.service_account(server['json2']).open('Notify')))
-            with SQL() as db:
-                db.request('DROP TABLE stats;')
-                db.request('DROP TABLE statistics;')
-                db.commit()
-                db.create_table_stats()
-                db.create_table_statistics()
-                db.commit()
-
-                dev_message = deepcopy(Auth.message(
-                    tag=code, old_message=dev_message,
-                    text=f'\nRecreated tables {datetime.now().timestamp() - stamp}'))
-
-                for item in db.get_all_lot_counts():
-                    if item['item_id'] and item['lot_count'] != item['stats_count']:
-                        update_stats_records(db, dict(item))
-            Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Stats reload ended.', tag=code)
-        except IndexError and Exception:
-            Auth.dev.thread_except()
 
 
 def storage_reloader():
