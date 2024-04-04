@@ -88,9 +88,9 @@ def update_statistics(db: SQL, item: dict) -> None:
     stats = db.get_statistics_by_item_id(item['item_id'], item['quality'])
     week, month, all_time = stats.get('week', {}), stats.get('month', {}), stats.get('all', {})
 
-    price = all_time.get('median_price', 0) if all_time.get('sold', 0) >= 10 else Decimal('0')
-    price = month.get('median_price', 0) if month.get('sold', 0) >= 10 else price
-    price = week.get('median_price', 0) if week.get('sold', 0) >= 10 else price
+    price = all_time.get('median_price', 0)
+    price = month.get('median_price', 0) if month.get('sold', 0) >= 16 else price
+    price = week.get('median_price', 0) if week.get('sold', 0) >= 8 else price
 
     value = {
         'price': price,
