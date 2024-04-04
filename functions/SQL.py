@@ -282,8 +282,7 @@ class SQL:
                    '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
         for column in ['item_id', 'item_name', 'quality', 'lot_count', 'price', 'stats']:
             number_format = 'NUMERIC(24, 12)' if column in ['price'] else 'INTEGER'
-            if column in integer_columns:
-                column += f' {number_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
+            column += f' {number_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
             columns.append(column)
         columns.append('CONSTRAINT id_primary_key PRIMARY KEY (id)')
         self.request(f"CREATE TABLE IF NOT EXISTS statistics ({', '.join(columns)});")
