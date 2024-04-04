@@ -36,7 +36,7 @@ async def update_lots(client: TelegramClient, ids: list) -> None:
             lot = lot_handler.lot_from_message(message)
             db.update('lots', lot['post_id'], lot, commit=True) if lot.get('post_id') else None
             if lot.get('item_id') is not None and lot.get('status') != '#active':
-                item = {'item_id': lot['item_id'], 'quality': lot.get('status')}
+                item = {'item_id': lot['item_id'], 'quality': lot.get('quality')}
                 _thread.start_new_thread(update_stats_records, (item,))
 
 
@@ -140,7 +140,7 @@ def lot_detector():
                         with SQL() as db:
                             db.insert('lots', lot, primary_key='post_id', commit=True)
                     if lot.get('item_id') is not None and lot.get('status') != '#active':
-                        item = {'item_id': lot['item_id'], 'quality': lot.get('status')}
+                        item = {'item_id': lot['item_id'], 'quality': lot.get('quality')}
                         _thread.start_new_thread(update_stats_records, (item,))
                     Auth.dev.printer(f'Обновление: {lot}')
             Auth.dev.printer(f"detector() в работе: {server['channel']}")
