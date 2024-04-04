@@ -82,6 +82,8 @@ class SQL:
                     print('БЫЛА ОШИБКА, ПРОПУСТИЛИ')
                     self.connection = perform_connection()
                     return self.request(sql, fetchone, return_row_count)
+                elif re.search('current transaction is aborted', str(error)):
+                    self.connection.rollback()
                 else:
                     raise error
 
