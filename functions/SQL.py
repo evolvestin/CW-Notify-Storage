@@ -84,6 +84,7 @@ class SQL:
                     return self.request(sql, fetchone, return_row_count)
                 elif re.search('current transaction is aborted', str(error)):
                     self.connection.rollback()
+                    return self.request(sql, fetchone, return_row_count)
                 else:
                     raise error
 
@@ -280,8 +281,9 @@ class SQL:
         columns = ['id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
                    '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
         for column in ['item_id', 'item_name', 'quality', 'lot_count', 'price', 'stats']:
-            integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
-            column += f' {integer_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
+            number_format = 'NUMERIC(24, 12)' if column in ['price'] else 'INTEGER'
+            if column in integer_columns:
+                column += f' {number_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
             columns.append(column)
         columns.append('CONSTRAINT id_primary_key PRIMARY KEY (id)')
         self.request(f"CREATE TABLE IF NOT EXISTS statistics ({', '.join(columns)});")
@@ -292,8 +294,7 @@ class SQL:
         columns = ['id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
                    '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
         for column in ['item_id', 'item_name', 'quality', 'cost', 'stats']:
-            integer_format = 'BIGINT' if column in ['stamp'] else 'INTEGER'
-            column += f' {integer_format} DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
+            column += f' INTEGER DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
             columns.append(column)
         columns.append('CONSTRAINT stats_pkey PRIMARY KEY (id)')
         self.request(f"CREATE TABLE IF NOT EXISTS stats ({', '.join(columns)});")
