@@ -99,6 +99,7 @@ def update_statistics(db: SQL, item: dict) -> None:
         'item_name': server['item_ids'].get(item['item_id']),
     }
     if db.update_statistics_record(item['item_id'], item['quality'], value, commit=commit_query) == 0:
+        value.update({'item_id': item['item_id'], 'quality': item['quality']})
         db.insert('statistics', value, primary_key='id', commit=commit_query)
 
 
