@@ -57,10 +57,12 @@ def update_stats_records(item: dict):
         with SQL() as db:
             if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
                 item.update({'quality': 'Common'})
-            create_stats(db, item), update_statistics(db, item)
+            create_stats(db, item)
+            update_statistics(db, item)
             if item['quality'] is not None:
                 item.update({'quality': None})
-                create_stats(db, item), update_statistics(db, item)
+                create_stats(db, item)
+                update_statistics(db, item)
     except IndexError and Exception:
         Auth.dev.executive(None)
 
