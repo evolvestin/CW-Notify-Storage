@@ -171,6 +171,7 @@ def lot_telegram_updater():
                 sleep(15)
             else:
                 Auth.dev.executive(None)
+                sleep(1)
                 _thread.start_new_thread(lot_telegram_updater, ())
                 _thread.exit()
 

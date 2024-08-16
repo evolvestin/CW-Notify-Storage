@@ -71,8 +71,11 @@ class SQL:
             try:
                 cursor.execute(sql)
                 if return_row_count is False:
-                    if cursor.description and cursor.rowcount:
-                        return dict(cursor.fetchone()) if fetchone else list(cursor.fetchall())
+                    if cursor.description:
+                        if fetchone:
+                            return dict(cursor.fetchone()) if cursor.rowcount else None
+                        else:
+                            return list(cursor.fetchall()) if cursor.rowcount else []
                     else:
                         return None
                 else:
@@ -175,7 +178,7 @@ class SQL:
 
     # ------------------------------------------------------------------------------------------ LOTS BEGIN
     def get_active_lots(self) -> list:
-        return self.request("SELECT * FROM lots WHERE status = '#active'")
+        return self.request("SELECT * FROM lots WHERE status = '#active'") or []
 
     def is_item_has_qualities(self, item_id: str) -> bool:
         result = self.request(
