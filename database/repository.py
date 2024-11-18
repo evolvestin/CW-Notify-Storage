@@ -90,7 +90,12 @@ class StatsQueries:
         )
 
         if quality is not None:
-            subquery = subquery.filter(Lots.quality == literal(quality))
+            if quality == 'Common':
+                quality_condition = Lots.quality.is_(None)
+            else:
+                quality_condition = (Lots.quality == literal(quality))
+
+            subquery = subquery.filter(quality_condition)
 
         subquery_cte = subquery.cte()
 
