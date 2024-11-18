@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import json
 import asyncio
 import gspread
 import _thread
@@ -17,10 +16,12 @@ from aiogram.dispatcher import Dispatcher
 from statistics import median as median_function
 from telethon.sync import TelegramClient, events
 
-from functions.SQL import SQL, commit_query
+from functions.SQL import SQL
 from functions.lot_handler import LotHandler
 from functions.objects import code, bold, time_now, AuthCentre
 from functions.initial import const_creation, update_const_items
+
+from services import lot_statistics
 # =====================================================================================================================
 server = const_creation()
 lot_handler = LotHandler(server)
@@ -57,12 +58,13 @@ def update_stats_records(item: dict):
         with SQL() as db:
             if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
                 item.update({'quality': 'Common'})
+            item.update({'item_name': server['item_ids'].get(item['item_id'])})
             create_stats(db, item)
-            update_statistics(db, item)
+            lot_statistics.update_statistics(item)
             if item['quality'] is not None:
                 item.update({'quality': None})
                 create_stats(db, item)
-                update_statistics(db, item)
+                lot_statistics.update_statistics(item)
     except IndexError and Exception:
         Auth.dev.executive(None)
 
@@ -83,25 +85,6 @@ def stats_reloader(update_all: bool):
             Auth.dev.thread_except()
 
 
-def update_statistics(db: SQL, item: dict) -> None:
-    stats = db.get_statistics_by_item_id(item['item_id'], item['quality'])
-    week, month, all_time = stats.get('week', {}), stats.get('month', {}), stats.get('all', {})
-
-    price = all_time.get('median_price', 0)
-    price = month.get('median_price', 0) if month.get('sold', 0) >= 16 else price
-    price = week.get('median_price', 0) if week.get('sold', 0) >= 8 else price
-
-    value = {
-        'price': price,
-        'stats': str(json.dumps(stats, default=str)),
-        'lot_count': stats.get('all', {}).get('count', 0),
-        'item_name': server['item_ids'].get(item['item_id']),
-    }
-    if db.update_statistics_record(item['item_id'], item['quality'], value, commit=commit_query) == 0:
-        value.update({'item_id': item['item_id'], 'quality': item['quality']})
-        db.insert('statistics', value, primary_key='id', commit=commit_query)
-
-
 @dispatcher.message_handler()
 async def message_handler(message: types.Message):
     try:
@@ -110,13 +93,19 @@ async def message_handler(message: types.Message):
                 text = 'Перезагружаем базу данных.'
                 _thread.start_new_thread(storage_reloader, ())
             elif message.text.startswith('/reload_stats'):
+                from database.session import engine
+                from database.models import Base, AllTimeStats, PeriodStats
                 text = 'Перезагружаем базу статистики.'
                 if 'full' in message.text:
                     text += ' С пересозданием.'
                     with SQL() as db:
-                        db.request('DROP TABLE statistics;'), db.request('DROP TABLE stats;')
+                        db.request(f'DROP TABLE {AllTimeStats.__table__};')
+                        db.request(f'DROP TABLE {PeriodStats.__table__};')
+                        db.request('DROP TABLE stats;')
                         db.commit()
-                        db.create_table_statistics(), db.create_table_stats()
+
+                        Base.metadata.create_all(bind=engine, tables=[AllTimeStats.__table__, PeriodStats.__table__])
+                        db.create_table_stats()
                         db.commit()
                 _thread.start_new_thread(stats_reloader, (True if 'all' in message.text else False,))
             else:

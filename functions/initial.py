@@ -72,7 +72,7 @@ def get_sheet_data(spreadsheet: gspread.models.Spreadsheet, name: str, dimension
 
     elif title == 'database':
         with SQL() as db:
-            db.create_table_lots(), db.create_table_stats(), db.create_table_statistics()
+            db.create_table_lots(), db.create_table_stats()
 
     elif title == 'sessions':
         client = Drive(dimension)
