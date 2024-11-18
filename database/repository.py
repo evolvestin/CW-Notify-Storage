@@ -34,11 +34,14 @@ class StatsQueries:
         )
 
         if quality is not None:
-            quality = Lots.quality.is_(None) if quality == 'Common' else literal(quality)
+            if quality == 'Common':
+                quality_condition = Lots.quality.is_(None)
+            else:
+                quality_condition = (Lots.quality == literal(quality))
 
-            sold_query = sold_query.filter(Lots.quality == quality)
-            unsold_query = unsold_query.filter(Lots.quality == quality)
-            cancelled_query = cancelled_query.filter(Lots.quality == quality)
+            sold_query = sold_query.filter(quality_condition)
+            unsold_query = unsold_query.filter(quality_condition)
+            cancelled_query = cancelled_query.filter(quality_condition)
 
         if stamp is not None:
             sold_query = sold_query.order_by(Lots.stamp.desc())  # Дополнительная сортировка
