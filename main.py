@@ -69,7 +69,7 @@ def update_stats_records(item: dict):
         Auth.dev.executive(None)
 
 
-def stats_reloader(update_all: bool):
+def stats_reloader():
     global server
     if server['storage_reload'] is False:
         try:
@@ -78,8 +78,7 @@ def stats_reloader(update_all: bool):
             with SQL() as db:
                 lot_counts = db.get_all_lot_counts()
             for item in lot_counts:
-                if item['item_id'] and (update_all or item['lot_count'] != item['stats_count']):
-                    update_stats_records(dict(item))
+                update_stats_records(dict(item))
             Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Stats reload ended.', tag=code)
         except IndexError and Exception:
             Auth.dev.thread_except()
@@ -96,18 +95,25 @@ async def message_handler(message: types.Message):
                 from database.session import engine
                 from database.models import Base, AllTimeStats, PeriodStats
                 text = 'Перезагружаем базу статистики.'
-                if 'full' in message.text:
-                    text += ' С пересозданием.'
-                    with SQL() as db:
+                with SQL() as db:
+                    try:
                         db.request(f'DROP TABLE {AllTimeStats.__table__};')
+                    except IndexError and Exception:
+                        pass
+                    try:
                         db.request(f'DROP TABLE {PeriodStats.__table__};')
+                    except IndexError and Exception:
+                        pass
+                    try:
                         db.request('DROP TABLE stats;')
-                        db.commit()
+                    except IndexError and Exception:
+                        pass
+                    db.commit()
 
-                        Base.metadata.create_all(bind=engine, tables=[AllTimeStats.__table__, PeriodStats.__table__])
-                        db.create_table_stats()
-                        db.commit()
-                _thread.start_new_thread(stats_reloader, (True if 'all' in message.text else False,))
+                    Base.metadata.create_all(bind=engine, tables=[AllTimeStats.__table__, PeriodStats.__table__])
+                    db.create_table_stats()
+                    db.commit()
+                _thread.start_new_thread(stats_reloader, ())
             else:
                 text = 'Бот статистики функционирует в штатном режиме.'
             await bot.send_message(message.chat.id, text, parse_mode='HTML')

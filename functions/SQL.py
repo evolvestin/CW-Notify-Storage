@@ -222,22 +222,8 @@ class SQL:
         self.commit() if commit else None
         return result
 
-    def update_statistics_record(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
-        quality_condition = f"= '{quality}'" if quality else 'IS NULL'
-        result = self.request(
-            f"UPDATE statistics SET {self.update_items(record)} "
-            f"WHERE item_id = '{item_id}' AND quality {quality_condition}", return_row_count=True)
-        self.commit() if commit else None
-        return result
-
     def get_all_lot_counts(self):
-        stats_count = (
-            f"SELECT lot_count FROM statistics WHERE item_id = finder_item_id "
-            f"AND COALESCE(quality, 'Common') = COALESCE(finder_quality, 'Common') ORDER BY id DESC LIMIT 1")
-        query = (f"SELECT item_id, quality, item_id as finder_item_id, "
-                 f"COALESCE(quality, 'Common') AS finder_quality, COUNT(*) AS lot_count "
-                 f"FROM lots WHERE NOT status = '#active' GROUP BY item_id, quality")
-        return self.request(f"SELECT *, ({stats_count}) AS stats_count FROM ({query}) AS Q")
+        return self.request(f'SELECT item_id, quality FROM lots GROUP BY item_id, quality')
 
     def create_table_stats(self) -> None:
         integer_columns = []
