@@ -100,11 +100,11 @@ async def message_handler(message: types.Message):
                 text = 'Перезагружаем базу статистики.'
                 with SQL() as db:
                     try:
-                        db.request(f'DROP TABLE {AllTimeStats.__table__};')
+                        db.request(f'DROP TABLE {PeriodStats.__table__};')
                     except IndexError and Exception:
                         pass
                     try:
-                        db.request(f'DROP TABLE {PeriodStats.__table__};')
+                        db.request(f'DROP TABLE {AllTimeStats.__table__};')
                     except IndexError and Exception:
                         pass
                     try:
