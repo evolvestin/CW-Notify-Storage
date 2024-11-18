@@ -131,7 +131,6 @@ class StatsRepository(StatsQueries):
         )
         return self.session.execute(query).fetchall()
 
-
     def calculate_statistics(self, item_id: str, quality: str = None, stamp: int = None) -> SQLAlchemyRow:
         query = self.statistics_query(item_id, quality, stamp)
         return self.session.execute(query).fetchone()

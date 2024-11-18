@@ -16,6 +16,9 @@ from aiogram.dispatcher import Dispatcher
 from statistics import median as median_function
 from telethon.sync import TelegramClient, events
 
+from database.session import engine
+from database.models import Base, AllTimeStats, PeriodStats
+
 from functions.SQL import SQL
 from functions.lot_handler import LotHandler
 from functions.objects import code, bold, time_now, AuthCentre
@@ -78,7 +81,9 @@ def stats_reloader():
             with SQL() as db:
                 lot_counts = db.get_all_lot_counts()
             for item in lot_counts:
-                update_stats_records(dict(item))
+                item = dict(item)
+                if item['item_id']:
+                    update_stats_records(item)
             Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Stats reload ended.', tag=code)
         except IndexError and Exception:
             Auth.dev.thread_except()
@@ -92,8 +97,6 @@ async def message_handler(message: types.Message):
                 text = 'Перезагружаем базу данных.'
                 _thread.start_new_thread(storage_reloader, ())
             elif message.text.startswith('/reload_stats'):
-                from database.session import engine
-                from database.models import Base, AllTimeStats, PeriodStats
                 text = 'Перезагружаем базу статистики.'
                 with SQL() as db:
                     try:
@@ -298,7 +301,7 @@ def create_stats(db: SQL, item: dict) -> None:
             'quality': item['quality'],
             'item_name': server['item_ids'].get(item['item_id'])
         })
-        db.insert('stats', value, primary_key='id')
+        db.insert('stats', value, primary_key='id', commit=True)
         print(f"CREATED {item['item_id']} {item['quality']}", time_now(iso=True))
     else:
         print(f"UPDATED {item['item_id']} {item['quality']}", time_now(iso=True))

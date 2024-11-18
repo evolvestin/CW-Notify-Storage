@@ -4,7 +4,7 @@ from database.repository import StatsRepository
 
 
 def update_statistics(item: dict):
-    print('UPDATING', item)
+    print('UPDATING STAT', item)
     with StatsRepository() as db:
         stats = db.calculate_statistics(item['item_id'], item['quality'])
         stats_record_id = db.upsert_all_time_stats(
