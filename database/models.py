@@ -49,7 +49,7 @@ class AllTimeStats(Base):
     id = Column(Integer, primary_key=True)
     item_id = Column(String, nullable=False)
     quality = Column(String, nullable=True)
-    item_name = Column(String, nullable=False)
+    item_name = Column(String, nullable=True)
     count = Column(Integer, nullable=False, default=0)
     median = Column(Numeric(24, 12), nullable=False, default=0)
     cancelled_count = Column(Integer, nullable=False, default=0)
