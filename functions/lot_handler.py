@@ -3,8 +3,8 @@ import re
 from datetime import datetime
 from functions.objects import sub_blank
 from functions.lot_constants import cyrillic_modifiers
-from game_time_converter import convert_game_date_to_timestamp
 from functions.SQL import SQL, lot_columns, lot_integer_columns
+from functions.game_time_converter import convert_game_date_to_timestamp
 
 
 class LotHandler:
