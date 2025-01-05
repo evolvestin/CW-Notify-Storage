@@ -19,7 +19,8 @@ from database.models import Base, AllTimeStats, PeriodStats
 
 from functions.SQL import SQL
 from functions.lot_handler import LotHandler
-from functions.objects import code, time_now, AuthCentre
+from functions.html import bold, code, html_link
+from functions.objects import time_now, AuthCentre
 from functions.initial import const_creation, update_const_items
 
 from services import lot_statistics
@@ -117,6 +118,7 @@ async def message_handler(message: types.Message):
 
 def lot_detector():
     try:
+        no_item_id_post_ids = []
         asyncio.set_event_loop(asyncio.new_event_loop())
         client = TelegramClient(os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash'])
         with client:
@@ -125,12 +127,28 @@ def lot_detector():
             async def post_handler(response):
                 if response:
                     lot = lot_handler.lot_from_message(response.message)
+
                     if lot.get('post_id'):
                         with SQL() as db:
                             db.insert('lots', lot, primary_key='post_id', commit=True)
+
                     if lot.get('item_id') is not None and lot.get('status') != '#active':
                         item = {'item_id': lot['item_id'], 'quality': lot.get('quality')}
                         _thread.start_new_thread(update_stats_records, (item,))
+
+                    elif not lot.get('item_id') and lot.get('post_id') not in no_item_id_post_ids:
+                        no_item_id_post_ids.append(lot.get('post_id'))
+                        lot_link = html_link(
+                            link=f"{server['link_auction_channel']}{lot.get('post_id')}",
+                            text=f"#{lot.get('lot_id')}",
+                        )
+                        lines = [
+                            f"Lot {lot_link} : {lot.get('item_name')}",
+                            f"Post ID: {code(lot.get('post_id'))}",
+                            bold('Unable to determine item ID'),
+                        ]
+                        Auth.message(text='\n'.join(lines))
+
                     Auth.dev.printer(f'Обновление: {lot}')
             Auth.dev.printer(f"detector() в работе: {server['auction_channel']}")
             client.run_until_disconnected()

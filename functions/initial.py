@@ -8,10 +8,11 @@ from functions.SQL import SQL
 from functions.GDrive import Drive
 from functions.base_path import base_path
 from functions.lot_constants import raw_symbols
-from functions.objects import t_me, sub_blank, environmental_files
+from functions.blank_substitution import sub_blank
+from functions.objects import t_me, environmental_files
 
 
-def update_const_items(spreadsheet: gspread.models.Spreadsheet, name: str = 'items2', dimension: str = 'ROWS'):
+def update_const_items(spreadsheet: gspread.models.Spreadsheet, name: str = 'items', dimension: str = 'ROWS'):
     emojis, long_emojis = [], []
     allowed_to = {'params': [], 'engrave': []}
     item_ids, item_names, item_tiers = {}, {}, {}
@@ -92,8 +93,6 @@ def get_sheet_data(spreadsheet: gspread.models.Spreadsheet, name: str, dimension
                 for key, value in zip(keys, resource):
                     if key == 'form':
                         server.update({key: literal_eval(sub_blank(value))})
-                    elif key == 'auction_channel':
-                        server.update({key: value, f'link: {key}': f'{t_me}s/{value}/'})
                     elif key == 'ID_POST_LOT_UPDATER':
                         server.update({key: int(value), f'link: {key}': f'{t_me}lot_updater/{value}'})
                     else:
