@@ -110,7 +110,7 @@ class LotHandler:
             for key, pattern in self.lot_pattern.items():
                 search = re.search(pattern, line)
                 if search:
-                    if key == 'date':
+                    if key == 'stamp':
                         lot.update({key: convert_game_date_to_timestamp(search.group(1), os.environ['server'])})
                     elif key == 'price':
                         lot.update({key: int(search.group(1))})
