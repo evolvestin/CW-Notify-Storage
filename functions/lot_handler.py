@@ -1,8 +1,9 @@
+import os
 import re
-from timer import timer
 from datetime import datetime
 from functions.objects import sub_blank
 from functions.lot_constants import cyrillic_modifiers
+from game_time_converter import convert_game_date_to_timestamp
 from functions.SQL import SQL, lot_columns, lot_integer_columns
 
 
@@ -12,7 +13,7 @@ class LotHandler:
         self.lot_pattern: dict = server['form']
         self.allowed_to: dict = server['allowed_to']
         self.item_names: dict = server['item_names']
-        self.castle_emojis: str = server['castle_list']
+        self.castle_emojis: str = server['castle_pattern']
 
     def lot_from_message(self, message) -> dict:
         if message and message.id and message.message:
@@ -109,8 +110,8 @@ class LotHandler:
             for key, pattern in self.lot_pattern.items():
                 search = re.search(pattern, line)
                 if search:
-                    if key == 'stamp':
-                        lot.update({key: timer(search)})
+                    if key == 'date':
+                        lot.update({key: convert_game_date_to_timestamp(search.group(1), os.environ['server'])})
                     elif key == 'price':
                         lot.update({key: int(search.group(1))})
                     elif key == 'condition':

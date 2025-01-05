@@ -8,12 +8,10 @@ import requests
 from time import sleep
 from copy import deepcopy
 from aiogram import types
-from statistics import mean
 from bs4 import BeautifulSoup
 from datetime import datetime
 from aiogram.utils import executor
 from aiogram.dispatcher import Dispatcher
-from statistics import median as median_function
 from telethon.sync import TelegramClient, events
 
 from database.session import engine
@@ -21,7 +19,7 @@ from database.models import Base, AllTimeStats, PeriodStats
 
 from functions.SQL import SQL
 from functions.lot_handler import LotHandler
-from functions.objects import code, bold, time_now, AuthCentre
+from functions.objects import code, time_now, AuthCentre
 from functions.initial import const_creation, update_const_items
 
 from services import lot_statistics
@@ -35,7 +33,7 @@ bot, dispatcher = Auth.async_bot, Dispatcher(Auth.async_bot)
 
 async def update_lots(client: TelegramClient, ids: list) -> None:
     with SQL() as db:
-        messages = await client.get_messages(server['channel'], ids=ids)
+        messages = await client.get_messages(server['auction_channel'], ids=ids)
         for message in messages:
             lot = lot_handler.lot_from_message(message)
             db.update('lots', lot['post_id'], lot, commit=True) if lot.get('post_id') else None
@@ -62,11 +60,9 @@ def update_stats_records(item: dict):
             if item['quality'] is None and db.is_item_has_qualities(item['item_id']):
                 item.update({'quality': 'Common'})
             item.update({'item_name': server['item_ids'].get(item['item_id'])})
-            create_stats(db, item)
             lot_statistics.update_statistics(item)
             if item['quality'] is not None:
                 item.update({'quality': None})
-                create_stats(db, item)
                 lot_statistics.update_statistics(item)
     except IndexError and Exception:
         Auth.dev.executive(None)
@@ -107,14 +103,9 @@ async def message_handler(message: types.Message):
                         db.request(f'DROP TABLE {AllTimeStats.__table__};')
                     except IndexError and Exception:
                         pass
-                    try:
-                        db.request('DROP TABLE stats;')
-                    except IndexError and Exception:
-                        pass
                     db.commit()
 
                     Base.metadata.create_all(bind=engine, tables=[AllTimeStats.__table__, PeriodStats.__table__])
-                    db.create_table_stats()
                     db.commit()
                 _thread.start_new_thread(stats_reloader, ())
             else:
@@ -129,8 +120,8 @@ def lot_detector():
         asyncio.set_event_loop(asyncio.new_event_loop())
         client = TelegramClient(os.environ['session1'], int(os.environ['api_id']), os.environ['api_hash'])
         with client:
-            @client.on(events.NewMessage(chats=server['channel']))
-            @client.on(events.MessageEdited(chats=server['channel']))
+            @client.on(events.NewMessage(chats=server['auction_channel']))
+            @client.on(events.MessageEdited(chats=server['auction_channel']))
             async def post_handler(response):
                 if response:
                     lot = lot_handler.lot_from_message(response.message)
@@ -141,7 +132,7 @@ def lot_detector():
                         item = {'item_id': lot['item_id'], 'quality': lot.get('quality')}
                         _thread.start_new_thread(update_stats_records, (item,))
                     Auth.dev.printer(f'Обновление: {lot}')
-            Auth.dev.printer(f"detector() в работе: {server['channel']}")
+            Auth.dev.printer(f"detector() в работе: {server['auction_channel']}")
             client.run_until_disconnected()
     except IndexError and Exception:
         Auth.dev.executive(None)
@@ -187,8 +178,8 @@ def storage_reloader():
         need_hard_handle = []
         lot_barrier, calculated_lot_barrier = 1, 1
         client = gspread.service_account(server['json2'])
-        spreadsheet_names = [pre + server['storage'] for pre in ['', 'temp-']]
-        soup = BeautifulSoup(requests.get(f"{server['link: lot_updater_post_id']}?embed=1").text, 'html.parser')
+        spreadsheet_names = [pre + server['worksheet_storage'] for pre in ['', 'temp-']]
+        soup = BeautifulSoup(requests.get(f"{server['link: ID_POST_LOT_UPDATER']}?embed=1").text, 'html.parser')
 
         if soup.find('div', class_='tgme_widget_message_error') is None:
             raw = str(soup.find('div', class_='tgme_widget_message_text js-message_text')).replace('<br/>', '\n')
@@ -232,79 +223,6 @@ def storage_reloader():
         Auth.message(old_message=dev_message, text=f'\n{Auth.time()} Reload ended.', tag=code)
     except IndexError and Exception:
         Auth.dev.thread_except()
-
-
-def create_stats(db: SQL, item: dict) -> None:
-    time_week = time_now() - (7 * 24 * 60 * 60)
-    lots = db.get_ended_lots_by_item_id(item['item_id'], item['quality'])
-    stats = {'costs_list_full': [], 'costs_list_week': [],
-             'unsold_count_full': 0, 'unsold_count_week': 0,
-             'cancelled_count_full': 0, 'cancelled_count_week': 0}
-    for lot in lots:
-        if lot['status'] != 'Cancelled':
-            if lot['buyer_castle'] is not None:
-                stats['costs_list_full'].append(lot['price'])
-                if lot['stamp'] >= time_week:
-                    stats['costs_list_week'].append(lot['price'])
-            else:
-                stats['unsold_count_full'] += 1
-                if lot['stamp'] >= time_week:
-                    stats['unsold_count_week'] += 1
-        else:
-            stats['cancelled_count_full'] += 1
-            if lot['stamp'] >= time_week:
-                stats['cancelled_count_week'] += 1
-
-    value = {'cost': '0/0', 'stats': ''}
-    costs_list_full = stats['costs_list_full']
-    text = bold('{0} ') + str(len(costs_list_full)) + '__'
-    for title in ['{1}', '{2}']:
-        median = 0
-        minimum = 0
-        maximum = 0
-        average = 0
-        last_sold = ''
-        text += bold(title) + '_'
-        if title == '{1}':
-            last_sold = '__'
-            costs_list = costs_list_full
-            unsold_count = stats['unsold_count_full']
-            cancelled_count = stats['cancelled_count_full']
-        else:
-            costs_list = stats['costs_list_week']
-            unsold_count = stats['unsold_count_week']
-            cancelled_count = stats['cancelled_count_week']
-        if len(costs_list) > 0:
-            minimum = min(costs_list)
-            maximum = max(costs_list)
-            cost = value['cost']
-            median = median_function(costs_list)
-            average = round(mean(costs_list), 2)
-            median = int(median) if float(median).is_integer() else median
-            if title == '{2}':
-                last_sold = '_{8} ' + str(costs_list[-1])
-                pattern, median_text = r'/\d+', '/' + str(median)
-            else:
-                pattern, median_text = r'\d+/', str(median) + '/'
-            value['cost'] = re.sub(pattern, median_text, cost)
-        text += '{3} ' + str(median) + '_' + \
-                '{4} ' + str(average) + '_' + \
-                '{5} ' + str(minimum) + '/' + str(maximum) + '_' + \
-                '{6} ' + str(cancelled_count) + '_' + \
-                '{7} ' + str(unsold_count) + '/' + str(len(costs_list) + unsold_count) + \
-                last_sold
-        value['stats'] = text
-
-    if db.update_stat(item['item_id'], item['quality'], value) == 0:
-        value.update({
-            'item_id': item['item_id'],
-            'quality': item['quality'],
-            'item_name': server['item_ids'].get(item['item_id'])
-        })
-        db.insert('stats', value, primary_key='id', commit=True)
-        print(f"CREATED {item['item_id']} {item['quality']}", time_now(iso=True))
-    else:
-        print(f"UPDATED {item['item_id']} {item['quality']}", time_now(iso=True))
 
 
 if __name__ == '__main__' and os.environ.get('server') == 'local':

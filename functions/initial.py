@@ -4,9 +4,9 @@ import re
 import gspread
 import concurrent.futures
 from ast import literal_eval
-from settings import base_dir
 from functions.SQL import SQL
 from functions.GDrive import Drive
+from functions.base_path import base_path
 from functions.lot_constants import raw_symbols
 from functions.objects import t_me, sub_blank, environmental_files
 
@@ -42,9 +42,9 @@ def update_const_items(spreadsheet: gspread.models.Spreadsheet, name: str = 'ite
 
 def const_creation() -> dict:
     server = {}
-    for file_name in environmental_files(base_dir.joinpath('.'), python=True):
+    for file_name in environmental_files(base_path.joinpath('.'), python=True):
         search_json = re.search(r'(\d)\.json', file_name)
-        server.update({f'json{search_json.group(1)}': base_dir.joinpath(file_name)}) if search_json else None
+        server.update({f'json{search_json.group(1)}': base_path.joinpath(file_name)}) if search_json else None
 
     server.update({
         'storage_reload': False,
@@ -54,7 +54,11 @@ def const_creation() -> dict:
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as future_executor:
         futures = []
         for name, dimension in [
-                ('database', ''), ('sessions', server['json2']), ('items2', 'ROWS'), ('resources', 'COLUMNS')]:
+            ('database', ''),
+            ('sessions', server['json2']),
+            ('items', 'ROWS'),
+            ('resources', 'COLUMNS'),
+        ]:
             futures.append(future_executor.submit(get_sheet_data, server['spreadsheet'], name, dimension))
         for future in concurrent.futures.as_completed(futures):
             server.update(future.result())
@@ -72,7 +76,7 @@ def get_sheet_data(spreadsheet: gspread.models.Spreadsheet, name: str, dimension
 
     elif title == 'database':
         with SQL() as db:
-            db.create_table_lots(), db.create_table_stats()
+            db.create_table_lots()
 
     elif title == 'sessions':
         client = Drive(dimension)
@@ -90,7 +94,7 @@ def get_sheet_data(spreadsheet: gspread.models.Spreadsheet, name: str, dimension
                         server.update({key: literal_eval(sub_blank(value))})
                     elif key == 'auction_channel':
                         server.update({key: value, f'link: {key}': f'{t_me}s/{value}/'})
-                    elif key == 'lot_updater_post_id':
+                    elif key == 'ID_POST_LOT_UPDATER':
                         server.update({key: int(value), f'link: {key}': f'{t_me}lot_updater/{value}'})
                     else:
                         server.update({key: value})

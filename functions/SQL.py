@@ -7,7 +7,6 @@ from environ import environ
 from functions.objects import divide
 from psycopg2.extras import DictCursor
 from sshtunnel import SSHTunnelForwarder
-from datetime import datetime, timezone, timedelta
 
 if environ == 'local':
     print('POSTGRESQL через SSH')
@@ -191,13 +190,6 @@ class SQL:
         query += f" AND enchant = '{lot['enchant']}'" if depth == 3 else ''
         return self.request(query)
 
-    def get_ended_lots_by_item_id(self, item_id: str, quality: str = None) -> list:
-        quality_condition = ''
-        if quality is not None:
-            quality_condition = 'AND quality IS NULL' if quality.lower() == 'common' else f"AND quality = '{quality}'"
-        return self.request(f"SELECT * FROM lots WHERE item_id = '{item_id}' {quality_condition} "
-                            f"AND NOT status = '#active' ORDER BY stamp")
-
     def create_table_lots(self) -> None:
         columns = []
         for column in lot_columns:
@@ -214,25 +206,6 @@ class SQL:
     # ------------------------------------------------------------------------------------------ LOTS END
 
     # ------------------------------------------------------------------------------------------ STATS BEGIN
-    def update_stat(self, item_id: str, quality: str, record: dict, commit: bool = False) -> int:
-        quality_condition = f"= '{quality}'" if quality else 'IS NULL'
-        result = self.request(
-            f"UPDATE stats SET {self.update_items(record)} "
-            f"WHERE item_id = '{item_id}' AND quality {quality_condition}", return_row_count=True)
-        self.commit() if commit else None
-        return result
-
     def get_all_lot_counts(self):
         return self.request(f'SELECT item_id, quality FROM lots GROUP BY item_id, quality')
-
-    def create_table_stats(self) -> None:
-        integer_columns = []
-        columns = ['id integer NOT NULL GENERATED ALWAYS AS IDENTITY '
-                   '(INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1)']
-        for column in ['item_id', 'item_name', 'quality', 'cost', 'stats']:
-            column += f' INTEGER DEFAULT 0 NOT NULL' if column in integer_columns else ' TEXT NULL'
-            columns.append(column)
-        columns.append('CONSTRAINT stats_pkey PRIMARY KEY (id)')
-        self.request(f"CREATE TABLE IF NOT EXISTS stats ({', '.join(columns)});")
-        self.commit()
     # ------------------------------------------------------------------------------------------ STATS END

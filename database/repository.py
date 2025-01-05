@@ -123,14 +123,6 @@ class StatsRepository(StatsQueries):
         finally:
             self.session.close()  # Всегда закрываем сессию
 
-
-    def get_item_ids(self):
-        query = (
-            select(Lots.item_id, Lots.quality)
-            .group_by(Lots.item_id, Lots.quality)
-        )
-        return self.session.execute(query).fetchall()
-
     def calculate_statistics(self, item_id: str, quality: str = None, stamp: int = None) -> SQLAlchemyRow:
         query = self.statistics_query(item_id, quality, stamp)
         return self.session.execute(query).fetchone()
@@ -140,20 +132,20 @@ class StatsRepository(StatsQueries):
         return self.session.execute(query).fetchone()
 
     def upsert_all_time_stats(
-            self,
-            item_id: str,
-            quality: str,
-            item_name: str,
-            count: int,
-            median: Decimal,
-            cancelled_count: int,
-            sold_count: int,
-            average_price: Decimal,
-            minimum_price: Decimal,
-            maximum_price: Decimal,
-            unsold_count: int,
-            mad: Decimal,
-        ) -> int:
+        self,
+        item_id: str,
+        quality: str,
+        item_name: str,
+        count: int,
+        median: Decimal,
+        cancelled_count: int,
+        sold_count: int,
+        average_price: Decimal,
+        minimum_price: Decimal,
+        maximum_price: Decimal,
+        unsold_count: int,
+        mad: Decimal,
+    ) -> int:
         # Проверяем, существует ли запись
         stat_record = (
             self.session.query(AllTimeStats)
@@ -194,20 +186,20 @@ class StatsRepository(StatsQueries):
         return stat_record.id
 
     def upsert_period_stats(
-            self,
-            stats_id: int,
-            first_date: datetime,
-            last_date: datetime,
-            count: int,
-            median: Decimal,
-            cancelled_count: int,
-            sold_count: int,
-            average_price: Decimal,
-            minimum_price: Decimal,
-            maximum_price: Decimal,
-            unsold_count: int,
-            mad: Decimal,
-        ) -> int:
+        self,
+        stats_id: int,
+        first_date: datetime,
+        last_date: datetime,
+        count: int,
+        median: Decimal,
+        cancelled_count: int,
+        sold_count: int,
+        average_price: Decimal,
+        minimum_price: Decimal,
+        maximum_price: Decimal,
+        unsold_count: int,
+        mad: Decimal,
+    ) -> int:
 
         stat_record = (
             self.session.query(PeriodStats)
