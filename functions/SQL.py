@@ -186,8 +186,10 @@ class SQL:
 
     def get_distinct_names_by_params(self, lot: dict, depth: int = 1):
         query = f"SELECT DISTINCT item_name FROM lots WHERE item_id IS NOT NULL AND params = '{lot['params']}'"
-        query += f" AND quality = '{lot['quality']}'" if depth in [2, 3] else ''
-        query += f" AND enchant = '{lot['enchant']}'" if depth == 3 else ''
+        if depth in [2, 3]:
+            query += f" AND quality = '{lot['quality']}'" if lot['quality'] is None else ' AND quality IS NULL'
+        if depth == 3:
+            query += f" AND enchant = '{lot['enchant']}'" if lot['enchant'] is None else ' AND enchant IS NULL'
         return self.request(query)
 
     def create_table_lots(self) -> None:
