@@ -3,10 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from functions.SQL import postgresql_port
 
+db_host = os.environ.get('DB_HOST') or '127.0.0.1'
+
 DATABASE_URL = (
     f"postgresql://"
     f"{os.environ['DB_USER']}:{os.environ['DB_PASS']}"
-    f"@127.0.0.1:{postgresql_port}"
+    f"@{db_host}:{postgresql_port}"
     f"/{os.environ['DB_NAME']}"
 )
 

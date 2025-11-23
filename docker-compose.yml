@@ -1,0 +1,17 @@
+services:
+  storage_bot:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - server=cw2
+    volumes:
+      - .:/app
+    networks:
+      - cw_shared_network
+
+networks:
+  cw_shared_network:
+    external: true
