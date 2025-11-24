@@ -1,13 +1,13 @@
 gspread==3.6.0
-requests>=2.20.0
+requests==2.20.0
 GitPython==3.1.17
 e-objects==1.20.2
-beautifulsoup4>=4.9.1
+beautifulsoup4==4.9.1
 google-api-python-client==1.10.0
-psycopg2>=2.9.9
+psycopg2==2.9.9
 
-aiogram~=2.20
+aiogram==2.20
 Telethon==1.37.0
-Unidecode~=1.2.0
-sshtunnel~=0.4.0
+Unidecode==1.2.0
+sshtunnel==0.4.0
 SQLAlchemy==2.0.35
